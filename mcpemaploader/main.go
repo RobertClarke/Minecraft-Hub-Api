@@ -2,14 +2,12 @@ package main
 
 import (
 	"clarkezone-vs-com/mcpemapcore"
-	"crypto/md5"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 )
 
 func main() {
@@ -65,7 +63,7 @@ func GetWriteMapsFromService() {
 	for i := range list {
 		cool := list[i].(map[string]interface{})
 		name := cool["MapDownloadUri"].(string)
-		success, hash := downloadMap(name)
+		success, hash := mcpemapcore.DownloadContent(name, "maps/", "application/zip")
 		if success {
 			mcpemapcore.WriteNextMap(cool, true, hash)
 		} else {
@@ -81,33 +79,6 @@ func GetWriteMapsFromService() {
 	//
 	//	//writeMap(2, firstAsMap)
 	//	downloadMap(firstAsMap["MapDownloadUri"].(string))
-}
-
-func downloadMap(uri string) (bool, string) {
-	resp, err := http.Get(uri)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	headerType := resp.Header.Get("Content-Type")
-	if headerType == "application/zip" {
-		bytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fn := md5.Sum([]byte(uri))
-		filename := fmt.Sprintf("%x.zip", fn)
-		hash := fmt.Sprintf("%x", fn)
-		err = ioutil.WriteFile(filename, bytes, os.FileMode(0777))
-
-		if err != nil {
-			log.Fatal(err)
-		}
-		return true, hash
-	} else {
-		fmt.Printf("Bad MimeType:%v\n", headerType)
-	}
-	return false, ""
 }
 
 func iterate() {

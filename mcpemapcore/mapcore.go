@@ -1,9 +1,13 @@
 package mcpemapcore
 
 import (
+	"crypto/md5"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
@@ -29,6 +33,11 @@ type Map struct {
 	Featured       bool   `redis:"featured"`
 }
 
+type MapImage struct {
+	MapImageUri  string
+	MapImageHash string
+}
+
 type Stats struct {
 	Total_tested        int64 `redis:"total_tested"`
 	Total_bad_tested    int64 `redis:"total_bad_tested"`
@@ -46,6 +55,29 @@ func init() {
 	if nil != err {
 		log.Fatalln("Error: Connection to redis:", err)
 	}
+	if !exists("maps") {
+		err = os.Mkdir("maps", 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	if !exists("mapimages") {
+		err = os.Mkdir("mapimages", 0777)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func exists(path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		} else {
+			log.Fatal(err)
+		}
+	}
+	return true
 }
 
 func GetStats() Stats {
@@ -115,13 +147,15 @@ func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash 
 
 	uriList := object["MapImageUriList"].([]interface{})
 
-	for _, i := range uriList {
-		actual := i.(map[string]interface{})["MapImageUri"]
-		_, err = conn.Do("LPUSH", "mapimages:"+strconv.Itoa(postId), actual)
-		if err != nil {
-			return err
-		}
-	}
+	WriteImageUriList(postId, uriList)
+
+	//	for _, i := range uriList {
+	//		actual := i.(map[string]interface{})["MapImageUri"]
+	//		_, err = conn.Do("LPUSH", "mapimages:"+strconv.Itoa(postId), actual)
+	//		if err != nil {
+	//			return err
+	//		}
+	//	}
 
 	if good {
 		conn.Do("LPUSH", "goodmaplist", postId)
@@ -135,6 +169,31 @@ func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash 
 
 	//uriList := object["MapUriList"].([]map[string]interface{})
 
+	return err
+}
+
+func WriteImageUriList(postId int, mapList []interface{}) error {
+	var err error
+	for _, i := range mapList {
+		actual := i.(map[string]interface{})["MapImageUri"]
+		success, hash := DownloadContent(actual.(string), "mapimages", "")
+
+		if success {
+			mapImageId, err := redis.Int(conn.Do("INCR", "next_mapImage_id"))
+			if err != nil {
+				return err
+			}
+			_, err = conn.Do("HMSET",
+				fmt.Sprintf("mapimage:%d", mapImageId),
+				"mapimageuri", actual,
+				"mapimageuash", hash)
+
+			_, err = conn.Do("LPUSH", "mapimages:"+strconv.Itoa(postId), mapImageId)
+		}
+		if err != nil {
+			return err
+		}
+	}
 	return err
 }
 
@@ -173,4 +232,31 @@ func GetMapsFromRedis(start, count int64) ([]*Map, int64, error) {
 	} else {
 		return maps, r - start - int64(len(values)), nil
 	}
+}
+
+func DownloadContent(uri string, dir string, acceptMime string) (bool, string) {
+	resp, err := http.Get(uri)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	headerType := resp.Header.Get("Content-Type")
+	if headerType == acceptMime || acceptMime == "" {
+		bytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fn := md5.Sum([]byte(uri))
+		filename := fmt.Sprintf("%x.zip", fn)
+		hash := fmt.Sprintf("%x", fn)
+		err = ioutil.WriteFile(fmt.Sprintf("%v/%v", dir, filename), bytes, os.FileMode(0777))
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		return true, hash
+	} else {
+		fmt.Printf("Bad MimeType:%v\n", headerType)
+	}
+	return false, ""
 }
