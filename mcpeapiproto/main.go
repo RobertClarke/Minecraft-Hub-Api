@@ -24,6 +24,8 @@ func GetMaps(wr http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/maps", GetMaps)
-	http.ListenAndServe(":8080", nil)
+	http.HandleFunc("/getmaplist", GetMaps)
+	// use http.stripprefix to redirect
+	http.Handle("/maps/", http.FileServer(http.Dir(".")))
+	panic(http.ListenAndServe(":8080", nil))
 }

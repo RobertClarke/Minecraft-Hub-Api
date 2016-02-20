@@ -21,6 +21,7 @@ type Map struct {
 	MapTitle       string `redis:"map_title"`
 	Description    string `redis:"description"`
 	MapDownloadUri string `redis:"mapdownloaduri"`
+	MapFileHash    string `redis:"mapfilehash"`
 	Author         string `redis:"author"`
 	AuthorUri      string `redis:"author_uri"`
 	NumViews       int    `redis:"numviews"`
@@ -147,6 +148,10 @@ func GetMapFromRedis(mapId string) (*Map, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	//TODO: enable this rewriting of download uri to be disabled and configured.
+	u.MapDownloadUri = fmt.Sprintf("http://localhost:8080/maps/%v.zip", u.MapFileHash)
+
 	return u, nil
 }
 

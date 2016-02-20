@@ -67,7 +67,6 @@ func GetWriteMapsFromService() {
 		name := cool["MapDownloadUri"].(string)
 		success, hash := downloadMap(name)
 		if success {
-			fmt.Println("Valid:" + name)
 			mcpemapcore.WriteNextMap(cool, true, hash)
 		} else {
 			mcpemapcore.WriteNextMap(cool, false, hash)
@@ -91,7 +90,6 @@ func downloadMap(uri string) (bool, string) {
 	}
 	defer resp.Body.Close()
 	headerType := resp.Header.Get("Content-Type")
-	fmt.Printf("Header MimeType:%v\n", headerType)
 	if headerType == "application/zip" {
 		bytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
@@ -106,6 +104,8 @@ func downloadMap(uri string) (bool, string) {
 			log.Fatal(err)
 		}
 		return true, hash
+	} else {
+		fmt.Printf("Bad MimeType:%v\n", headerType)
 	}
 	return false, ""
 }
