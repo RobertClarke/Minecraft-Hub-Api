@@ -176,8 +176,9 @@ func WriteImageUriList(postId int, mapList []interface{}) error {
 	var err error
 	for _, i := range mapList {
 		actual := i.(map[string]interface{})["MapImageUri"]
-		success, hash := DownloadContent(actual.(string), "mapimages", "")
-
+		success, hash := DownloadContent(actual.(string), "mapimages", "", "jpeg")
+		//		success := true
+		//		hash := ""
 		if success {
 			mapImageId, err := redis.Int(conn.Do("INCR", "next_mapImage_id"))
 			if err != nil {
@@ -186,7 +187,7 @@ func WriteImageUriList(postId int, mapList []interface{}) error {
 			_, err = conn.Do("HMSET",
 				fmt.Sprintf("mapimage:%d", mapImageId),
 				"mapimageuri", actual,
-				"mapimageuash", hash)
+				"mapimagehash", hash)
 
 			_, err = conn.Do("LPUSH", "mapimages:"+strconv.Itoa(postId), mapImageId)
 		}
@@ -234,7 +235,7 @@ func GetMapsFromRedis(start, count int64) ([]*Map, int64, error) {
 	}
 }
 
-func DownloadContent(uri string, dir string, acceptMime string) (bool, string) {
+func DownloadContent(uri string, dir string, acceptMime string, ext string) (bool, string) {
 	resp, err := http.Get(uri)
 	if err != nil {
 		log.Fatal(err)
@@ -247,9 +248,11 @@ func DownloadContent(uri string, dir string, acceptMime string) (bool, string) {
 			log.Fatal(err)
 		}
 		fn := md5.Sum([]byte(uri))
-		filename := fmt.Sprintf("%x.zip", fn)
+		filename := fmt.Sprintf("%x.%v", fn, ext)
 		hash := fmt.Sprintf("%x", fn)
-		err = ioutil.WriteFile(fmt.Sprintf("%v/%v", dir, filename), bytes, os.FileMode(0777))
+		filepath := fmt.Sprintf("%v/%v", dir, filename)
+		fmt.Println(filepath)
+		err = ioutil.WriteFile(filepath, bytes, os.FileMode(0777))
 
 		if err != nil {
 			log.Fatal(err)

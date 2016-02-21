@@ -63,7 +63,7 @@ func GetWriteMapsFromService() {
 	for i := range list {
 		cool := list[i].(map[string]interface{})
 		name := cool["MapDownloadUri"].(string)
-		success, hash := mcpemapcore.DownloadContent(name, "maps/", "application/zip")
+		success, hash := mcpemapcore.DownloadContent(name, "maps", "application/zip", "zip")
 		if success {
 			mcpemapcore.WriteNextMap(cool, true, hash)
 		} else {
