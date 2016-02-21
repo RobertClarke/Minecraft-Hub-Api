@@ -17,25 +17,27 @@ const (
 )
 
 var (
-	conn redis.Conn
+	conn     redis.Conn
+	siteRoot string
 )
 
 type Map struct {
-	Id             string
-	MapTitle       string `redis:"map_title"`
-	Description    string `redis:"description"`
-	MapDownloadUri string `redis:"mapdownloaduri"`
-	MapFileHash    string `redis:"mapfilehash"`
-	Author         string `redis:"author"`
-	AuthorUri      string `redis:"author_uri"`
-	NumViews       int    `redis:"numviews"`
-	Tested         bool   `redis:"tested"`
-	Featured       bool   `redis:"featured"`
+	Id              string
+	MapTitle        string `redis:"map_title"`
+	Description     string `redis:"description"`
+	MapDownloadUri  string `redis:"mapdownloaduri"`
+	MapFileHash     string `redis:"mapfilehash"`
+	Author          string `redis:"author"`
+	AuthorUri       string `redis:"author_uri"`
+	NumViews        int    `redis:"numviews"`
+	Tested          bool   `redis:"tested"`
+	Featured        bool   `redis:"featured"`
+	MapImageUriList []*MapImage
 }
 
 type MapImage struct {
-	MapImageUri  string
-	MapImageHash string
+	MapImageUri  string `redis:"mapimageuri"`
+	MapImageHash string `redis:"mapimagehash"`
 }
 
 type Stats struct {
@@ -67,6 +69,7 @@ func init() {
 			log.Fatal(err)
 		}
 	}
+	siteRoot = "http://clarkezone.ngrok.io"
 }
 
 func exists(path string) bool {
@@ -210,8 +213,45 @@ func GetMapFromRedis(mapId string) (*Map, error) {
 	}
 
 	//TODO: enable this rewriting of download uri to be disabled and configured.
-	u.MapDownloadUri = fmt.Sprintf("http://localhost:8080/maps/%v.zip", u.MapFileHash)
+	u.MapDownloadUri = fmt.Sprintf("%v/maps/%v.zip", siteRoot, u.MapFileHash)
 
+	//Enumerate and gather mapimages
+
+	u.MapImageUriList = GetMapImages(mapId)
+
+	return u, nil
+}
+
+func GetMapImages(mapId string) []*MapImage {
+	mapImages := []*MapImage{}
+	imageListKey := "mapimages:" + mapId
+	len, err := redis.Int64(conn.Do("LLEN", imageListKey))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	values, err := redis.Strings(conn.Do("LRANGE", imageListKey, 0, len-1))
+
+	for i := range values {
+		m, err := GetMapImageFromRedis(values[i])
+		if err == nil {
+			mapImages = append(mapImages, m)
+		}
+	}
+	return mapImages
+}
+
+func GetMapImageFromRedis(mapImageId string) (*MapImage, error) {
+	v, err := redis.Values(conn.Do("HGETALL", "mapimage:"+mapImageId))
+	if err != nil {
+		return nil, err
+	}
+	u := &MapImage{}
+	err = redis.ScanStruct(v, u)
+	if err != nil {
+		return nil, err
+	}
+	u.MapImageUri = fmt.Sprintf("%v/mapimages/%v.jpeg", siteRoot, u.MapImageHash)
 	return u, nil
 }
 

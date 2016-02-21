@@ -13,7 +13,7 @@ type MapListResponse struct {
 
 func GetMaps(wr http.ResponseWriter, r *http.Request) {
 	var mapResponse MapListResponse
-	mapResponse.Maps, _, _ = mcpemapcore.GetMapsFromRedis(0, 4)
+	mapResponse.Maps, _, _ = mcpemapcore.GetMapsFromRedis(0, 8)
 	bytes, err := json.Marshal(mapResponse)
 	if err == nil {
 		wr.Header().Set("Content-Type", "application/json")
@@ -27,5 +27,6 @@ func main() {
 	http.HandleFunc("/getmaplist", GetMaps)
 	// use http.stripprefix to redirect
 	http.Handle("/maps/", http.FileServer(http.Dir(".")))
+	http.Handle("/mapimages/", http.FileServer(http.Dir(".")))
 	panic(http.ListenAndServe(":8080", nil))
 }
