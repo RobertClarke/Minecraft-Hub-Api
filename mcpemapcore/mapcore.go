@@ -17,8 +17,7 @@ const (
 )
 
 var (
-	conn     redis.Conn
-	siteRoot string
+	conn redis.Conn
 )
 
 type Map struct {
@@ -69,7 +68,6 @@ func init() {
 			log.Fatal(err)
 		}
 	}
-	siteRoot = "http://clarkezone.ngrok.io"
 }
 
 func exists(path string) bool {
@@ -201,7 +199,7 @@ func WriteImageUriList(postId int, mapList []interface{}) error {
 	return err
 }
 
-func GetMapFromRedis(mapId string) (*Map, error) {
+func GetMapFromRedis(mapId string, siteRoot string) (*Map, error) {
 	v, err := redis.Values(conn.Do("HGETALL", "map:"+mapId))
 	if err != nil {
 		log.Fatal(err)
@@ -217,12 +215,12 @@ func GetMapFromRedis(mapId string) (*Map, error) {
 
 	//Enumerate and gather mapimages
 
-	u.MapImageUriList = GetMapImages(mapId)
+	u.MapImageUriList = GetMapImages(mapId, siteRoot)
 
 	return u, nil
 }
 
-func GetMapImages(mapId string) []*MapImage {
+func GetMapImages(mapId string, siteRoot string) []*MapImage {
 	mapImages := []*MapImage{}
 	imageListKey := "mapimages:" + mapId
 	len, err := redis.Int64(conn.Do("LLEN", imageListKey))
@@ -233,7 +231,7 @@ func GetMapImages(mapId string) []*MapImage {
 	values, err := redis.Strings(conn.Do("LRANGE", imageListKey, 0, len-1))
 
 	for i := range values {
-		m, err := GetMapImageFromRedis(values[i])
+		m, err := GetMapImageFromRedis(values[i], siteRoot)
 		if err == nil {
 			mapImages = append(mapImages, m)
 		}
@@ -241,7 +239,7 @@ func GetMapImages(mapId string) []*MapImage {
 	return mapImages
 }
 
-func GetMapImageFromRedis(mapImageId string) (*MapImage, error) {
+func GetMapImageFromRedis(mapImageId string, siteRoot string) (*MapImage, error) {
 	v, err := redis.Values(conn.Do("HGETALL", "mapimage:"+mapImageId))
 	if err != nil {
 		return nil, err
@@ -255,14 +253,14 @@ func GetMapImageFromRedis(mapImageId string) (*MapImage, error) {
 	return u, nil
 }
 
-func GetMapsFromRedis(start, count int64) ([]*Map, int64, error) {
+func GetMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
 	values, err := redis.Strings(conn.Do("LRANGE", "goodmaplist", start, start+count-1))
 	if err != nil {
 		return nil, 0, err
 	}
 	maps := []*Map{}
 	for _, mid := range values {
-		m, err := GetMapFromRedis(mid)
+		m, err := GetMapFromRedis(mid, siteRoot)
 		if err == nil {
 			maps = append(maps, m)
 		}
