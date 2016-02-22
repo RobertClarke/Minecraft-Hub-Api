@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path"
 )
 
 type MapListResponse struct {
@@ -26,19 +27,29 @@ func GetMaps(wr http.ResponseWriter, r *http.Request) {
 }
 
 type LogHandler struct {
+	wrapper http.Handler
 }
 
-func (LogHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	fmt.Println("file")
-	http.FileServer(http.Dir("."))
+func CreateLogHandler(h http.Handler) http.Handler {
+	logger := new(LogHandler)
+	logger.wrapper = h
+	return logger
+}
+
+func (h LogHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	_, fn := path.Split(r.RequestURI)
+	wp := path.Ext(fn)
+	fnnp := fn[:len(fn)-len(wp)]
+	fmt.Println("file:" + wp)
+	mcpemapcore.UpdateMapDownloadCount(fnnp)
+	h.wrapper.ServeHTTP(rw, r)
 }
 
 func main() {
 	http.HandleFunc("/getmaplist", GetMaps)
 	// use http.stripprefix to redirect
 	//http.Handle("/maps/", http.FileServer(http.Dir(".")))
-	var logger LogHandler
-	http.Handle("/maps/", logger)
+	http.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))
 	http.Handle("/mapimages/", http.FileServer(http.Dir(".")))
 	panic(http.ListenAndServe(":8080", nil))
 }

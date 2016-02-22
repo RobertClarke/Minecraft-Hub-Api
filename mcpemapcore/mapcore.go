@@ -21,16 +21,18 @@ var (
 )
 
 type Map struct {
-	Id              string
-	MapTitle        string `redis:"map_title"`
-	Description     string `redis:"description"`
-	MapDownloadUri  string `redis:"mapdownloaduri"`
-	MapFileHash     string `redis:"mapfilehash"`
-	Author          string `redis:"author"`
-	AuthorUri       string `redis:"author_uri"`
-	NumViews        int    `redis:"numviews"`
-	Tested          bool   `redis:"tested"`
-	Featured        bool   `redis:"featured"`
+	Id             string
+	MapTitle       string `redis:"map_title"`
+	Description    string `redis:"description"`
+	MapDownloadUri string `redis:"mapdownloaduri"`
+	MapFileHash    string `redis:"mapfilehash"`
+	Author         string `redis:"author"`
+	AuthorUri      string `redis:"author_uri"`
+	NumViews       int    `redis:"numviews"`
+	Tested         bool   `redis:"tested"`
+	Featured       bool   `redis:"featured"`
+	DownloadCount  int64  `redis:"downloadcount"`
+
 	MapImageUriList []*MapImage
 }
 
@@ -104,6 +106,26 @@ func WriteNextMap(object map[string]interface{}, good bool, mapfilehash string) 
 	return err
 }
 
+func UpdateMapDownloadCount(fileHash string) error {
+	var err error
+	var mapId string
+	mapId, err = redis.String(conn.Do("HGET", "mapfilehash:"+fileHash, "id"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if mapId != "" {
+		fmt.Printf("found map id %v for file %v\n", mapId, fileHash)
+		_, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "downloadcount", 1))
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		fmt.Printf("NOT found map id for file %d", fileHash)
+	}
+	return err
+}
+
 func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash string) error {
 	var err error
 	_, err = conn.Do("HMSET",
@@ -118,6 +140,11 @@ func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash 
 		"tested", object["Tested"],
 		"featured", object["Featured"],
 		"time", time.Now().Unix())
+
+	_, err = conn.Do("HMSET",
+		"mapfilehash:"+mapfilehash,
+		"id", fmt.Sprintf("%d", postId))
+
 	if object["Tested"] == "1" {
 		conn.Do("LPUSH", "testedmaplist", postId)
 		_, err = redis.Int(conn.Do("HINCRBY", "stats", "total_tested", 1))
