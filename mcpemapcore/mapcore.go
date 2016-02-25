@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -116,7 +117,12 @@ func UpdateMapDownloadCount(fileHash string) error {
 
 	if mapId != "" {
 		fmt.Printf("found map id %v for file %v\n", mapId, fileHash)
-		_, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "downloadcount", 1))
+		var count int
+		count, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "downloadcount", 1))
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = redis.Int(conn.Do("ZADD", "mostdownloaded", count, mapId))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -128,6 +134,7 @@ func UpdateMapDownloadCount(fileHash string) error {
 
 func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash string) error {
 	var err error
+	var nextGood, nextBad, nextTested, nextFeatured int
 	_, err = conn.Do("HMSET",
 		fmt.Sprintf("map:%d", postId),
 		"map_title", object["MapTitle"],
@@ -146,7 +153,11 @@ func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash 
 		"id", fmt.Sprintf("%d", postId))
 
 	if object["Tested"] == "1" {
-		conn.Do("LPUSH", "testedmaplist", postId)
+		if good {
+			nextTested, err = redis.Int(conn.Do("INCR", "next_tested"))
+			conn.Do("ZADD", "testedmapset", nextTested, postId)
+		}
+		//conn.Do("LPUSH", "testedmaplist", postId)
 		_, err = redis.Int(conn.Do("HINCRBY", "stats", "total_tested", 1))
 		if good {
 			_, err = redis.Int(conn.Do("HINCRBY", "stats", "total_good_tested", 1))
@@ -155,7 +166,11 @@ func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash 
 		}
 	}
 	if object["Featured"] == "1" {
-		conn.Do("LPUSH", "featuredmaplist", postId)
+		if good {
+			nextFeatured, err = redis.Int(conn.Do("INCR", "next_featured"))
+			conn.Do("ZADD", "featuredmapset", nextFeatured, postId)
+		}
+		//conn.Do("LPUSH", "featuredmaplist", postId)
 		_, err = redis.Int(conn.Do("INCR", "total_featured"))
 		if good {
 			_, err = redis.Int(conn.Do("HINCRBY", "stats", "total_good_featured", 1))
@@ -186,10 +201,13 @@ func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash 
 	//	}
 
 	if good {
-		conn.Do("LPUSH", "goodmaplist", postId)
+		nextGood, err = redis.Int(conn.Do("INCR", "next_good"))
+		conn.Do("ZADD", "goodmapset", nextGood, postId)
+		//conn.Do("LPUSH", "goodmaplist", postId)
 	} else {
-
-		conn.Do("LPUSH", "badmaplist", postId)
+		nextBad, err = redis.Int(conn.Do("INCR", "next_bad"))
+		conn.Do("ZADD", "badmapset", nextBad, postId)
+		//conn.Do("LPUSH", "badmaplist", postId)
 	}
 	if err != nil {
 		return err
@@ -238,6 +256,7 @@ func GetMapFromRedis(mapId string, siteRoot string) (*Map, error) {
 	}
 
 	//TODO: enable this rewriting of download uri to be disabled and configured.
+	//u.MapDownloadUri = fmt.Sprintf("http://%v/maps/%v.zip", siteRoot, u.MapFileHash)
 	u.MapDownloadUri = fmt.Sprintf("%v/maps/%v.zip", siteRoot, u.MapFileHash)
 
 	//Enumerate and gather mapimages
@@ -276,12 +295,27 @@ func GetMapImageFromRedis(mapImageId string, siteRoot string) (*MapImage, error)
 	if err != nil {
 		return nil, err
 	}
+	//u.MapImageUri = fmt.Sprintf("http://%v/mapimages/%v.jpeg", siteRoot, u.MapImageHash)
 	u.MapImageUri = fmt.Sprintf("%v/mapimages/%v.jpeg", siteRoot, u.MapImageHash)
 	return u, nil
 }
 
-func GetMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	values, err := redis.Strings(conn.Do("LRANGE", "goodmaplist", start, start+count-1))
+func GetAllMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	return GetMapsFromRedis(start, count, siteRoot, "goodmapset")
+}
+
+func GetFeaturedMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	return GetMapsFromRedis(start, count, siteRoot, "featuredmapset")
+}
+
+func GetMostDownloadedMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	return GetMapsFromRedis(start, count, siteRoot, "mostdownloaded")
+}
+
+func GetMapsFromRedis(start, count int64, siteRoot string, keyName string) ([]*Map, int64, error) {
+	//values, err := redis.Strings(conn.Do("LRANGE", "goodmaplist", start, start+count-1))
+	//values, err := redis.Strings(conn.Do("ZRANGE", "goodmapset", start, start+count-1))
+	values, err := redis.Strings(conn.Do("ZRANGE", keyName, start, start+count-1))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -292,7 +326,8 @@ func GetMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error
 			maps = append(maps, m)
 		}
 	}
-	r, err := redis.Int64(conn.Do("LLEN", "maplist"))
+	//r, err := redis.Int64(conn.Do("LLEN", "maplist"))
+	r, err := redis.Int64(conn.Do("ZCARD", "maplist"))
 	if err != nil {
 		return maps, 0, nil
 	} else {
@@ -325,6 +360,98 @@ func DownloadContent(uri string, dir string, acceptMime string, ext string) (boo
 		return true, hash
 	} else {
 		fmt.Printf("Bad MimeType:%v\n", headerType)
+	}
+	return false, ""
+}
+
+func DownloadContentRedirect(uri string, dir string, acceptMime string, ext string) (bool, string) {
+	check := http.Client{
+		CheckRedirect: func(r *http.Request, via []*http.Request) error {
+			fmt.Printf("Redirect from %v to %v\n", r.URL.Opaque, r.URL.Path)
+			r.URL.Opaque = r.URL.Path
+			return nil
+		},
+	}
+
+	resp, err := check.Get(uri)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	headerType := resp.Header.Get("Content-Type")
+	if headerType == acceptMime || acceptMime == "" {
+		bytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fn := md5.Sum([]byte(uri))
+		filename := fmt.Sprintf("%x.%v", fn, ext)
+		hash := fmt.Sprintf("%x", fn)
+		filepath := fmt.Sprintf("%v/%v", dir, filename)
+		fmt.Println(filepath)
+		err = ioutil.WriteFile(filepath, bytes, os.FileMode(0777))
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		return true, hash
+	} else {
+		fmt.Printf("Bad MimeType:%v\n", headerType)
+	}
+	return false, ""
+}
+
+func DownloadContentRedirectSearch(uri string, dir string, acceptMime string, ext string) (bool, string) {
+
+	check := http.Client{
+		CheckRedirect: func(r *http.Request, via []*http.Request) error {
+			fmt.Printf("Redirect from %v to %v\n", r.URL.Opaque, r.URL.Path)
+			r.URL.Opaque = r.URL.Path
+			return nil
+		},
+	}
+
+	resp, err := check.Get(uri)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	headerType := resp.Header.Get("Content-Type")
+	fmt.Printf("ContentType={0}\n", headerType)
+	bytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if headerType == acceptMime || acceptMime == "" {
+		fn := md5.Sum([]byte(uri))
+		filename := fmt.Sprintf("%x.%v", fn, ext)
+		hash := fmt.Sprintf("%x", fn)
+		filepath := fmt.Sprintf("%v/%v", dir, filename)
+		fmt.Println(filepath)
+		err = ioutil.WriteFile(filepath, bytes, os.FileMode(0777))
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		return true, hash
+	} else {
+		fmt.Println("HTML detected.. searching")
+		//fmt.Printf("%v", string(bytes))
+		searchFor :=
+			`(http://[a-z_\/0-9\-\#=&\.|,|;|\?|\!]*/.zip)`
+		stepRegex, _ := regexp.Compile(searchFor)
+		captures := stepRegex.FindStringSubmatch(string(bytes))
+		if len(captures) > 0 {
+			fmt.Printf("Found:%v\n", len(captures))
+			for i := range captures {
+				fmt.Printf("Capture: %v %v\n", i, captures[i])
+
+			}
+		} else {
+			fmt.Printf("Not found")
+		}
+
 	}
 	return false, ""
 }

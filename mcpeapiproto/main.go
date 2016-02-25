@@ -15,8 +15,21 @@ type MapListResponse struct {
 
 func GetMaps(wr http.ResponseWriter, r *http.Request) {
 	var mapResponse MapListResponse
-	fmt.Println("Host:" + r.Host)
-	mapResponse.Maps, _, _ = mcpemapcore.GetMapsFromRedis(0, 8, r.Host)
+	//fmt.Printf("Request:%+v", r)
+	switch r.RequestURI {
+	case "/getmaplist":
+		fmt.Println("Request: All maps")
+		mapResponse.Maps, _, _ = mcpemapcore.GetAllMapsFromRedis(0, 8, r.Host)
+		break
+	case "/getfeaturedmaplist":
+		fmt.Println("Request: featured maps")
+		mapResponse.Maps, _, _ = mcpemapcore.GetFeaturedMapsFromRedis(0, 8, r.Host)
+		break
+	case "/getmostdownloaded":
+		fmt.Println("Request: most downloaded")
+		mapResponse.Maps, _, _ = mcpemapcore.GetMostDownloadedMapsFromRedis(0, 8, r.Host)
+		break
+	}
 	bytes, err := json.Marshal(mapResponse)
 	if err == nil {
 		wr.Header().Set("Content-Type", "application/json")
@@ -47,6 +60,8 @@ func (h LogHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/getmaplist", GetMaps)
+	http.HandleFunc("/getfeaturedmaplist", GetMaps)
+	http.HandleFunc("/getmostdownloaded", GetMaps)
 	// use http.stripprefix to redirect
 	//http.Handle("/maps/", http.FileServer(http.Dir(".")))
 	http.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))
