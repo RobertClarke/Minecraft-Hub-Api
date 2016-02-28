@@ -307,19 +307,29 @@ func GetMapImageFromRedis(mapImageId string, siteRoot string) (*MapImage, error)
 }
 
 func GetAllMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	return GetMapsFromRedis(start, count, siteRoot, "goodmapset")
+	return GetMapsFromRedis(start, count, siteRoot, "goodmapset", false)
 }
 
 func GetFeaturedMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	return GetMapsFromRedis(start, count, siteRoot, "featuredmapset")
+	return GetMapsFromRedis(start, count, siteRoot, "featuredmapset", false)
 }
 
 func GetMostDownloadedMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	return GetMapsFromRedis(start, count, siteRoot, "mostdownloaded")
+	return GetMapsFromRedis(start, count, siteRoot, "mostdownloaded", true)
 }
 
-func GetMapsFromRedis(start, count int64, siteRoot string, keyName string) ([]*Map, int64, error) {
-	values, err := redis.Strings(conn.Do("ZRANGE", keyName, start, start+count-1))
+func GetMostFavoritedMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	return GetMapsFromRedis(start, count, siteRoot, "mostfavorited", true)
+}
+
+func GetMapsFromRedis(start, count int64, siteRoot string, keyName string, reverse bool) ([]*Map, int64, error) {
+	var values []string
+	var err error
+	if reverse {
+		values, err = redis.Strings(conn.Do("ZREVRANGE", keyName, start, start+count-1))
+	} else {
+		values, err = redis.Strings(conn.Do("ZRANGE", keyName, start, start+count-1))
+	}
 	if err != nil {
 		return nil, 0, err
 	}
@@ -475,6 +485,7 @@ func LoadUserInfo(userId string) (*User, error) {
 func UpdateFavoriteMap(u *User, mapId string, fav bool) error {
 
 	var err error
+	var existingCount int
 	//add mapid to favorite set for user
 	if fav {
 		_, err = redis.Int(conn.Do("SADD", "favorite:"+u.Id, mapId))
@@ -483,7 +494,11 @@ func UpdateFavoriteMap(u *User, mapId string, fav bool) error {
 		}
 
 		//incrememnt favorite count on map:w
-		_, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "favoritecount", 1))
+		existingCount, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "favoritecount", 1))
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = redis.Int(conn.Do("ZADD", "mostfavorited", existingCount, mapId))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -494,7 +509,11 @@ func UpdateFavoriteMap(u *User, mapId string, fav bool) error {
 		}
 
 		//decrement favorite count on map:w
-		_, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "favoritecount", -1))
+		existingCount, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "favoritecount", -1))
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = redis.Int(conn.Do("ZADD", "mostfavorited", existingCount, mapId))
 		if err != nil {
 			log.Fatal(err)
 		}

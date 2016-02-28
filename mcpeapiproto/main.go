@@ -66,6 +66,10 @@ func GetMaps(wr http.ResponseWriter, r *http.Request) {
 		fmt.Println("Request: most downloaded")
 		mapResponse.Maps, _, err = mcpemapcore.GetMostDownloadedMapsFromRedis(0, 8, r.Host)
 		break
+	case "/getmostfavorited":
+		fmt.Println("Request: most favorited")
+		mapResponse.Maps, _, err = mcpemapcore.GetMostFavoritedMapsFromRedis(0, 8, r.Host)
+		break
 	case "/getuserfavorites":
 		userid := r.Header.Get("userid")
 		user, err := mcpemapcore.LoadUserInfo(userid)
@@ -132,6 +136,7 @@ func main() {
 	http.HandleFunc("/getmaplist", GetMaps)
 	http.HandleFunc("/getfeaturedmaplist", GetMaps)
 	http.HandleFunc("/getmostdownloaded", GetMaps)
+	http.HandleFunc("/getmostfavorited", GetMaps)
 	http.HandleFunc("/setfavoritemap", jwtauth.RequireTokenAuthentication(UpdateFavoriteMap))
 	http.HandleFunc("/getuserfavorites", jwtauth.RequireTokenAuthentication(GetMaps))
 	// use http.stripprefix to redirect
