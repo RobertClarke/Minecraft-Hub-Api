@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"clarkezone-vs-com/mcpemapcore"
 	"encoding/json"
-	"fmt"
 	"github.com/clarkezone/jwtauth"
 	"log"
 	"net/http"
@@ -18,11 +17,11 @@ func TestGetMap(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	bytes, err := json.Marshal(themap)
+	_, err = json.Marshal(themap)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%s", bytes)
+	//fmt.Printf("%s", bytes)
 }
 
 func TestMain(m *testing.M) {
@@ -47,15 +46,8 @@ func resetTestDb() {
 }
 
 func TestFavoriteMap(t *testing.T) {
-	var currentAuth jwtauth.JwtAuthProvider
-
-	userid := "1"
-	token, _ := currentAuth.GenerateToken(userid)
-
 	ts := httptest.NewServer(http.HandlerFunc(jwtauth.RequireTokenAuthentication(UpdateFavoriteMap)))
 	defer ts.Close()
-
-	client := &http.Client{}
 
 	type Body struct {
 		MapId string
@@ -66,21 +58,7 @@ func TestFavoriteMap(t *testing.T) {
 
 	b.MapId = "1"
 	b.Add = true
-
-	jsonBytes, err := json.Marshal(b)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req, _ := http.NewRequest("GET", ts.URL, bytes.NewBuffer(jsonBytes))
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-
-	result, _ := client.Do(req)
-	if result.StatusCode != http.StatusOK {
-		t.Fail()
-	}
+	testGet(ts, b, t)
 }
 
 func TestGetFavories(t *testing.T) {
