@@ -21,6 +21,12 @@ var (
 	conn redis.Conn
 )
 
+type User struct {
+	Id       string
+	Username string `redis:"username"`
+	Auth     string `redis:"auth"`
+}
+
 type Map struct {
 	Id             string
 	MapTitle       string `redis:"map_title"`
@@ -313,8 +319,6 @@ func GetMostDownloadedMapsFromRedis(start, count int64, siteRoot string) ([]*Map
 }
 
 func GetMapsFromRedis(start, count int64, siteRoot string, keyName string) ([]*Map, int64, error) {
-	//values, err := redis.Strings(conn.Do("LRANGE", "goodmaplist", start, start+count-1))
-	//values, err := redis.Strings(conn.Do("ZRANGE", "goodmapset", start, start+count-1))
 	values, err := redis.Strings(conn.Do("ZRANGE", keyName, start, start+count-1))
 	if err != nil {
 		return nil, 0, err
@@ -326,7 +330,6 @@ func GetMapsFromRedis(start, count int64, siteRoot string, keyName string) ([]*M
 			maps = append(maps, m)
 		}
 	}
-	//r, err := redis.Int64(conn.Do("LLEN", "maplist"))
 	r, err := redis.Int64(conn.Do("ZCARD", "maplist"))
 	if err != nil {
 		return maps, 0, nil
@@ -454,4 +457,64 @@ func DownloadContentRedirectSearch(uri string, dir string, acceptMime string, ex
 
 	}
 	return false, ""
+}
+
+func LoadUserInfo(userId string) (*User, error) {
+	v, err := redis.Values(conn.Do("HGETALL", "user:"+userId))
+	if err != nil {
+		return nil, err
+	}
+	u := &User{Id: userId}
+	err = redis.ScanStruct(v, u)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+func UpdateFavoriteMap(u *User, mapId string, fav bool) error {
+
+	var err error
+	//add mapid to favorite set for user
+	if fav {
+		_, err = redis.Int(conn.Do("SADD", "favorite:"+u.Id, mapId))
+		if err != nil {
+			return err
+		}
+
+		//incrememnt favorite count on map:w
+		_, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "favoritecount", 1))
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		_, err = redis.Int(conn.Do("SPOP", "favorite:"+u.Id))
+		if err != nil {
+			return err
+		}
+
+		//decrement favorite count on map:w
+		_, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "favoritecount", -1))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	return nil
+}
+
+func GetFavoriteMaps(u *User, siteRoot string) ([]*Map, error) {
+
+	values, err := redis.Strings(conn.Do("SMEMBERS", "favorite:"+u.Id))
+	if err != nil {
+		return nil, err
+	}
+	maps := []*Map{}
+	for _, mid := range values {
+		m, err := GetMapFromRedis(mid, siteRoot)
+		if err == nil {
+			maps = append(maps, m)
+		}
+	}
+	return maps, nil
 }
