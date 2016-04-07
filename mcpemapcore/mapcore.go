@@ -21,12 +21,6 @@ var (
 	conn redis.Conn
 )
 
-type User struct {
-	Id       string
-	Username string `redis:"username"`
-	Auth     string `redis:"auth"`
-}
-
 type Map struct {
 	Id             string
 	MapTitle       string `redis:"map_title"`
@@ -467,19 +461,6 @@ func DownloadContentRedirectSearch(uri string, dir string, acceptMime string, ex
 
 	}
 	return false, ""
-}
-
-func LoadUserInfo(userId string) (*User, error) {
-	v, err := redis.Values(conn.Do("HGETALL", "user:"+userId))
-	if err != nil {
-		return nil, err
-	}
-	u := &User{Id: userId}
-	err = redis.ScanStruct(v, u)
-	if err != nil {
-		return nil, err
-	}
-	return u, nil
 }
 
 func UpdateFavoriteMap(u *User, mapId string, fav bool) error {

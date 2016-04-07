@@ -13,12 +13,16 @@ import (
 func main() {
 	showstats := flag.Bool("stats", false, "displays database stats")
 	doimport := flag.Bool("import", false, "Import records from mcpehub")
+	makeAdmin := flag.String("makeadmin", "", "If user with this username exists, make them admin")
 	flag.Parse()
 	if *showstats {
 		dumpStats()
 	}
 	if *doimport {
 		GetWriteMapsFromService()
+	}
+	if *makeAdmin != "" {
+		makeUserAdmin(*makeAdmin)
 	}
 	//	m, _ := mcpemapcore.GetMapFromRedis("2")
 	//	maps, remaining, _ := mcpemapcore.GetMapsFromRedis(0, 4)
@@ -31,6 +35,10 @@ func main() {
 	//	for i := range maps {
 	//		fmt.Println(maps[i].MapTitle)
 	//	}
+}
+
+func makeUserAdmin(userName string) {
+	mcpemapcore.MakeUserAdmin(userName)
 }
 
 func dumpStats() {

@@ -131,17 +131,26 @@ type errorObj struct {
 	Message string
 }
 
+func HelloServer(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	fmt.Printf("hello world\n")
+	fmt.Fprintf(w, "hello, world!\n")
+}
+
 func main() {
 	redisauth.RegisterAuthHandlers()
+	http.HandleFunc("/hello", HelloServer)
 	http.HandleFunc("/getmaplist", GetMaps)
 	http.HandleFunc("/getfeaturedmaplist", GetMaps)
 	http.HandleFunc("/getmostdownloaded", GetMaps)
 	http.HandleFunc("/getmostfavorited", GetMaps)
 	http.HandleFunc("/setfavoritemap", jwtauth.RequireTokenAuthentication(UpdateFavoriteMap))
 	http.HandleFunc("/getuserfavorites", jwtauth.RequireTokenAuthentication(GetMaps))
+	http.HandleFunc("/admin/updatemapfromupload", jwtauth.RequireTokenAuthentication(UpdateMapFromUpload))
 	// use http.stripprefix to redirect
 	//http.Handle("/maps/", http.FileServer(http.Dir(".")))
 	http.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))
 	http.Handle("/mapimages/", http.FileServer(http.Dir(".")))
-	panic(http.ListenAndServe(":8080", nil))
+	panic(http.ListenAndServeTLS(":8080", "dev.objectivepixel.com.crt", "dev.objectivepixel.com.key", nil))
+	//panic(http.ListenAndServe(":8080", nil))
 }

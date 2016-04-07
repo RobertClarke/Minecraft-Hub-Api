@@ -31,7 +31,7 @@ func hasFailed(wr http.ResponseWriter, err error) bool {
 func RegisterAuthHandlers() {
 	var provider = redisUserProvider{}
 	api := jwtauth.CreateApiSecurity(provider)
-	api.RegisterAuthHandlers()
+	api.RegisterLoginHandlers()
 	http.HandleFunc("/register", registerUser)
 }
 
@@ -47,6 +47,7 @@ func (a redisUserProvider) login(username string, password string) (result bool,
 }
 
 func registerUser(wr http.ResponseWriter, r *http.Request) {
+	wr.Header().Set("Access-Control-Allow-Origin", "*")
 	type RegisterUser struct {
 		Username string
 		Password string
