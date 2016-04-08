@@ -316,6 +316,10 @@ func GetMostFavoritedMapsFromRedis(start, count int64, siteRoot string) ([]*Map,
 	return GetMapsFromRedis(start, count, siteRoot, "mostfavorited", true)
 }
 
+func GetBadMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	return GetMapsFromRedis(start, count, siteRoot, "badmapset", true)
+}
+
 func GetMapsFromRedis(start, count int64, siteRoot string, keyName string, reverse bool) ([]*Map, int64, error) {
 	var values []string
 	var err error

@@ -132,25 +132,25 @@ type errorObj struct {
 }
 
 func HelloServer(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	fmt.Printf("hello world\n")
 	fmt.Fprintf(w, "hello, world!\n")
 }
 
 func main() {
 	redisauth.RegisterAuthHandlers()
-	http.HandleFunc("/hello", HelloServer)
-	http.HandleFunc("/getmaplist", GetMaps)
-	http.HandleFunc("/getfeaturedmaplist", GetMaps)
-	http.HandleFunc("/getmostdownloaded", GetMaps)
-	http.HandleFunc("/getmostfavorited", GetMaps)
-	http.HandleFunc("/setfavoritemap", jwtauth.RequireTokenAuthentication(UpdateFavoriteMap))
-	http.HandleFunc("/getuserfavorites", jwtauth.RequireTokenAuthentication(GetMaps))
-	http.HandleFunc("/admin/updatemapfromupload", jwtauth.RequireTokenAuthentication(UpdateMapFromUpload))
+	http.HandleFunc("/hello", jwtauth.CorsOptions(HelloServer))
+	http.HandleFunc("/getmaplist", jwtauth.CorsOptions(GetMaps))
+	http.HandleFunc("/getfeaturedmaplist", jwtauth.CorsOptions(GetMaps))
+	http.HandleFunc("/getmostdownloaded", jwtauth.CorsOptions(GetMaps))
+	http.HandleFunc("/getmostfavorited", jwtauth.CorsOptions(GetMaps))
+	http.HandleFunc("/setfavoritemap", jwtauth.CorsOptions(jwtauth.RequireTokenAuthentication(UpdateFavoriteMap)))
+	http.HandleFunc("/getuserfavorites", jwtauth.CorsOptions(jwtauth.RequireTokenAuthentication(GetMaps)))
+	http.HandleFunc("/admin/getbadmaplist", jwtauth.CorsOptions(jwtauth.RequireTokenAuthentication(GetBadMapList)))
+	http.HandleFunc("/admin/updatemapfromupload", jwtauth.CorsOptions(jwtauth.RequireTokenAuthentication(UpdateMapFromUpload)))
 	// use http.stripprefix to redirect
 	//http.Handle("/maps/", http.FileServer(http.Dir(".")))
 	http.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))
 	http.Handle("/mapimages/", http.FileServer(http.Dir(".")))
-	panic(http.ListenAndServeTLS(":8080", "dev.objectivepixel.com.crt", "dev.objectivepixel.com.key", nil))
-	//panic(http.ListenAndServe(":8080", nil))
+	//panic(http.ListenAndServeTLS(":8080", "dev.objectivepixel.com.crt", "dev.objectivepixel.com.key", nil))
+	panic(http.ListenAndServe(":8080", nil))
 }
