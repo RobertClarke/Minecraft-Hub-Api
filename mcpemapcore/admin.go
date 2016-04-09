@@ -7,13 +7,7 @@ func MakeUserAdmin(username string) error {
 	user, err := LoadUserByUsername(username)
 
 	if user != nil {
-		//TODO: get the role from an application global place
-
-		role := Role{}
-		role.Id = 1
-		role.Name = "Administrator"
-
-		user.AddToRole(role)
+		user.AddToRole(*rolesByName["Administrator"])
 		fmt.Printf("User %v is admin\n", user.Username)
 	} else {
 		fmt.Printf("User %v not found", username)

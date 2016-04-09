@@ -66,7 +66,7 @@ func TestRegisterUser(t *testing.T) {
 func TestLogin(t *testing.T) {
 	log.Println("Testing user login")
 	TestRegisterUser(t)
-	var provider = redisUserProvider{}
+	var provider = RedisUserProvider{}
 
 	api := jwtauth.CreateApiSecurity(provider)
 
@@ -81,11 +81,20 @@ func TestLogin(t *testing.T) {
 		t.Fail()
 	}
 
-	result := GetBody(res)
+	result := GetBodyBytes(res)
 
-	user := jwtauth.UserFromToken(result)
+	type body struct {
+		T string
+	}
+
+	var userStruct body
+
+	json.Unmarshal(result, &userStruct)
+
+	user := jwtauth.UserFromToken(userStruct.T)
+
 	if user != "1" {
-		t.Fail()
+		log.Fatal("wrong user")
 	}
 }
 
@@ -96,4 +105,12 @@ func GetBody(res *http.Response) (result string) {
 		log.Fatal(err)
 	}
 	return string(response)
+}
+func GetBodyBytes(res *http.Response) (result []byte) {
+	response, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return response
 }

@@ -18,8 +18,29 @@ const (
 )
 
 var (
-	conn redis.Conn
+	conn        redis.Conn
+	rolesByName map[string]*Role
+	rolesById   map[int]*Role
 )
+
+func init() {
+	fmt.Println("mcpemapcoreinit")
+
+	rolesByName = make(map[string]*Role)
+	rolesById = make(map[int]*Role)
+
+	var role1 = Role{}
+	role1.Id = 1
+	role1.Name = "Administrator"
+	rolesByName[role1.Name] = &role1
+	rolesById[role1.Id] = &role1
+
+	var role2 = Role{}
+	role2.Id = 2
+	role2.Name = "Contributor"
+	rolesByName[role2.Name] = &role2
+	rolesById[role2.Id] = &role2
+}
 
 type Map struct {
 	Id             string

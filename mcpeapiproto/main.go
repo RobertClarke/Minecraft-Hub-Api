@@ -5,11 +5,12 @@ import (
 	"clarkezone-vs-com/redisauthprovider"
 	"encoding/json"
 	"fmt"
-	"github.com/clarkezone/jwtauth"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"path"
+
+	"github.com/clarkezone/jwtauth"
 )
 
 type MapListResponse struct {
@@ -137,16 +138,20 @@ func HelloServer(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	redisauth.RegisterAuthHandlers()
-	http.HandleFunc("/hello", jwtauth.CorsOptions(HelloServer))
-	http.HandleFunc("/getmaplist", jwtauth.CorsOptions(GetMaps))
-	http.HandleFunc("/getfeaturedmaplist", jwtauth.CorsOptions(GetMaps))
-	http.HandleFunc("/getmostdownloaded", jwtauth.CorsOptions(GetMaps))
-	http.HandleFunc("/getmostfavorited", jwtauth.CorsOptions(GetMaps))
-	http.HandleFunc("/setfavoritemap", jwtauth.CorsOptions(jwtauth.RequireTokenAuthentication(UpdateFavoriteMap)))
-	http.HandleFunc("/getuserfavorites", jwtauth.CorsOptions(jwtauth.RequireTokenAuthentication(GetMaps)))
-	http.HandleFunc("/admin/getbadmaplist", jwtauth.CorsOptions(jwtauth.RequireTokenAuthentication(GetBadMapList)))
-	http.HandleFunc("/admin/updatemapfromupload", jwtauth.CorsOptions(jwtauth.RequireTokenAuthentication(UpdateMapFromUpload)))
+	var provider = redisauth.RedisUserProvider{}
+	auth := jwtauth.CreateApiSecurity(provider)
+	auth.RegisterLoginHandlers()
+	redisauth.RegisterUserRegistrationHandler()
+
+	http.HandleFunc("/hello", auth.CorsOptions(HelloServer))
+	http.HandleFunc("/getmaplist", auth.CorsOptions(GetMaps))
+	http.HandleFunc("/getfeaturedmaplist", auth.CorsOptions(GetMaps))
+	http.HandleFunc("/getmostdownloaded", auth.CorsOptions(GetMaps))
+	http.HandleFunc("/getmostfavorited", auth.CorsOptions(GetMaps))
+	http.HandleFunc("/setfavoritemap", auth.CorsOptions(auth.RequireTokenAuthentication(UpdateFavoriteMap)))
+	http.HandleFunc("/getuserfavorites", auth.CorsOptions(auth.RequireTokenAuthentication(GetMaps)))
+	http.HandleFunc("/admin/getbadmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(GetBadMapList)))
+	http.HandleFunc("/admin/updatemapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(UpdateMapFromUpload)))
 	// use http.stripprefix to redirect
 	//http.Handle("/maps/", http.FileServer(http.Dir(".")))
 	http.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))

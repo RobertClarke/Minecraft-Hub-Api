@@ -3,13 +3,19 @@ package main
 import (
 	"bytes"
 	"clarkezone-vs-com/mcpemapcore"
+	"clarkezone-vs-com/redisauthprovider"
 	"encoding/json"
-	"github.com/clarkezone/jwtauth"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/clarkezone/jwtauth"
+)
+
+var (
+	auth *jwtauth.ApiSecurity
 )
 
 func TestGetMap(t *testing.T) {
@@ -25,6 +31,11 @@ func TestGetMap(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
+	var provider = redisauth.RedisUserProvider{}
+	auth = jwtauth.CreateApiSecurity(provider)
+	auth.RegisterLoginHandlers()
+	redisauth.RegisterUserRegistrationHandler()
+
 	//TODO: make sure we don't write tests to db0
 	//TODO: tests should work without preexisting redis state
 	//	var result string
@@ -46,7 +57,7 @@ func resetTestDb() {
 }
 
 func TestFavoriteMap(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(jwtauth.RequireTokenAuthentication(UpdateFavoriteMap)))
+	ts := httptest.NewServer(http.HandlerFunc(auth.RequireTokenAuthentication(UpdateFavoriteMap)))
 	defer ts.Close()
 
 	type Body struct {
@@ -58,20 +69,19 @@ func TestFavoriteMap(t *testing.T) {
 
 	b.MapId = "1"
 	b.Add = true
-	testGet(ts, b, t)
+	testGet(ts, b, "1", t)
 }
 
 func TestGetFavories(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(jwtauth.RequireTokenAuthentication(GetMaps)))
+	ts := httptest.NewServer(http.HandlerFunc(auth.RequireTokenAuthentication(GetMaps)))
 	defer ts.Close()
 	ts.URL += "/getuserfavorites"
-	testGet(ts, nil, t)
+	testGet(ts, nil, "1", t)
 }
 
-func testGet(ser *httptest.Server, param interface{}, t *testing.T) {
+func testGet(ser *httptest.Server, param interface{}, userid string, t *testing.T) {
 	var currentAuth jwtauth.JwtAuthProvider
 
-	userid := "1"
 	token, _ := currentAuth.GenerateToken(userid)
 	client := &http.Client{}
 

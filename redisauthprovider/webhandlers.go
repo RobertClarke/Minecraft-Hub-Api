@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/clarkezone/jwtauth"
 	"io/ioutil"
 	"net/http"
 )
@@ -28,14 +27,11 @@ func hasFailed(wr http.ResponseWriter, err error) bool {
 	return false
 }
 
-func RegisterAuthHandlers() {
-	var provider = redisUserProvider{}
-	api := jwtauth.CreateApiSecurity(provider)
-	api.RegisterLoginHandlers()
+func RegisterUserRegistrationHandler() {
 	http.HandleFunc("/register", registerUser)
 }
 
-func (a redisUserProvider) login(username string, password string) (result bool, userid string) {
+func (a RedisUserProvider) login(username string, password string) (result bool, userid string) {
 	err, id := login(username, password)
 	if err != nil {
 		fmt.Printf("Login:Error:%v", err.Error())

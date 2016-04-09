@@ -15,6 +15,9 @@ func main() {
 
 }
 
+func init() {
+}
+
 var (
 	key = []byte("h27d72ts7hiasehi711334")
 )

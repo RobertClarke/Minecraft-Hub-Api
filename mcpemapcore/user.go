@@ -42,8 +42,3 @@ func (ro User) AddToRole(role Role) error {
 	}
 	return nil
 }
-
-func (ro User) IsInRole(role Role) bool {
-	//TODO: look in the redis set to see if user is in role
-	return true
-}
