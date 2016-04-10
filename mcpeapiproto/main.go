@@ -4,6 +4,7 @@ import (
 	"clarkezone-vs-com/mcpemapcore"
 	"clarkezone-vs-com/redisauthprovider"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -138,6 +139,8 @@ func HelloServer(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	useSsl := flag.Bool("ssl", false, "enable SSL")
+	flag.Parse()
 	var provider = redisauth.RedisUserProvider{}
 	auth := jwtauth.CreateApiSecurity(provider)
 	auth.RegisterLoginHandlers()
@@ -156,6 +159,11 @@ func main() {
 	//http.Handle("/maps/", http.FileServer(http.Dir(".")))
 	http.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))
 	http.Handle("/mapimages/", http.FileServer(http.Dir(".")))
-	//panic(http.ListenAndServeTLS(":8080", "dev.objectivepixel.com.crt", "dev.objectivepixel.com.key", nil))
-	panic(http.ListenAndServe(":8080", nil))
+	if *useSsl {
+		fmt.Printf("Listening for TLS on 8080\n")
+		panic(http.ListenAndServeTLS(":8080", "dev.objectivepixel.com.crt", "dev.objectivepixel.com.key", nil))
+	} else {
+		fmt.Printf("Listening for HTTP on 8080\n")
+		panic(http.ListenAndServe(":8080", nil))
+	}
 }
