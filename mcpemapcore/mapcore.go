@@ -54,6 +54,7 @@ type Map struct {
 	Tested         bool   `redis:"tested"`
 	Featured       bool   `redis:"featured"`
 	DownloadCount  int64  `redis:"downloadcount"`
+	FavoriteCount  int64  `redis:"favoritecount"`
 
 	MapImageUriList []*MapImage
 }
