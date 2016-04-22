@@ -3,14 +3,16 @@ package mcpemapcore
 import (
 	"crypto/md5"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 const (
@@ -47,6 +49,7 @@ type Map struct {
 	MapTitle       string `redis:"map_title"`
 	Description    string `redis:"description"`
 	MapDownloadUri string `redis:"mapdownloaduri"`
+	MapOriginalUri string
 	MapFileHash    string `redis:"mapfilehash"`
 	Author         string `redis:"author"`
 	AuthorUri      string `redis:"author_uri"`
@@ -81,13 +84,13 @@ func init() {
 	if nil != err {
 		log.Fatalln("Error: Connection to redis:", err)
 	}
-	if !exists("maps") {
+	if !Exists("maps") {
 		err = os.Mkdir("maps", 0777)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
-	if !exists("mapimages") {
+	if !Exists("mapimages") {
 		err = os.Mkdir("mapimages", 0777)
 		if err != nil {
 			log.Fatal(err)
@@ -95,7 +98,7 @@ func init() {
 	}
 }
 
-func exists(path string) bool {
+func Exists(path string) bool {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return false
@@ -152,6 +155,49 @@ func UpdateMapDownloadCount(fileHash string) error {
 		fmt.Printf("NOT found map id for file %d", fileHash)
 	}
 	return err
+}
+
+func UpdateMap(user *User, mapid int, uploadFilename string) error {
+
+	var pureHash = strings.NewReplacer(".zip", "").Replace(uploadFilename)
+
+	var err error
+	if user != nil {
+		sourceDir := "uploads/" + user.Username + "/" + uploadFilename
+		destDir := "Maps/" + uploadFilename
+		os.Rename(sourceDir, destDir)
+	}
+	if err != nil {
+		return err
+	}
+	_, err = conn.Do("HSET", "map:"+strconv.Itoa(mapid), "mapfilehash", pureHash)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = conn.Do("HSET", "mapfilehash:"+pureHash, "id", strconv.Itoa(mapid))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var nextGood int
+	nextGood, err = redis.Int(conn.Do("INCR", "next_good"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = conn.Do("ZADD", "goodmapset", nextGood, mapid)
+	if err != nil {
+		log.Fatal(err)
+	}
+	badid, err := redis.Int(conn.Do("ZSCORE", "badmapset", mapid))
+	if err != nil {
+		log.Fatal(err)
+	}
+	//nextBad, err = redis.Int(conn.Do("INCR", "next_bad"))
+	_, err = conn.Do("ZREM", "badmapset", badid, mapid)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return nil
 }
 
 func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash string) error {
@@ -277,6 +323,7 @@ func GetMapFromRedis(mapId string, siteRoot string) (*Map, error) {
 		log.Fatal(err)
 	}
 
+	u.MapOriginalUri = u.MapDownloadUri
 	//TODO: enable this rewriting of download uri to be disabled and configured.
 	//u.MapDownloadUri = fmt.Sprintf("http://%v/maps/%v.zip", siteRoot, u.MapFileHash)
 	u.MapDownloadUri = fmt.Sprintf("%v/maps/%v.zip", siteRoot, u.MapFileHash)

@@ -3,6 +3,8 @@ package main
 import (
 	"clarkezone-vs-com/mcpemapcore"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -13,10 +15,35 @@ func UpdateMapFromUpload(wr http.ResponseWriter, r *http.Request) {
 	role := mcpemapcore.GetRole("Administrator")
 
 	if jwtauth.IsInRole(role.Id, r) {
-		//TODO: get the uploadid from json
+		user := GetUser(wr, r)
+		type UpdateMapParams struct {
+			MapId      int    `json:"mapId"`
+			UploadHash string `json:"uploadHash"`
+		}
+
+		var parsedParams UpdateMapParams
+
+		bytes, err := ioutil.ReadAll(r.Body)
+		if hasFailed(wr, err) {
+			fmt.Printf("Failed to read bytes" + err.Error())
+			return
+		}
+
+		err = json.Unmarshal(bytes, &parsedParams)
+
+		if hasFailed(wr, err) {
+			fmt.Printf("Failed to unmarshall" + err.Error())
+			return
+		}
+
+		fmt.Printf("Unmarshalled %+v\n", parsedParams)
+
+		fmt.Printf("update map %v id with filehash %v\n", parsedParams.MapId, parsedParams.UploadHash)
+
+		mcpemapcore.UpdateMap(user, parsedParams.MapId, parsedParams.UploadHash)
 
 	} else {
-
+		wr.WriteHeader(http.StatusUnauthorized)
 	}
 }
 

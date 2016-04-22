@@ -3,12 +3,16 @@ package main
 import (
 	"clarkezone-vs-com/mcpemapcore"
 	"clarkezone-vs-com/redisauthprovider"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path"
 
 	"github.com/clarkezone/jwtauth"
@@ -58,7 +62,7 @@ func GetMaps(wr http.ResponseWriter, r *http.Request) {
 	switch r.RequestURI {
 	case "/getmaplist":
 		fmt.Println("Request: All maps")
-		mapResponse.Maps, _, err = mcpemapcore.GetAllMapsFromRedis(0, 8, r.Host)
+		mapResponse.Maps, _, err = mcpemapcore.GetAllMapsFromRedis(0, 12, r.Host)
 		break
 	case "/getfeaturedmaplist":
 		fmt.Println("Request: featured maps")
@@ -73,12 +77,7 @@ func GetMaps(wr http.ResponseWriter, r *http.Request) {
 		mapResponse.Maps, _, err = mcpemapcore.GetMostFavoritedMapsFromRedis(0, 8, r.Host)
 		break
 	case "/getuserfavorites":
-		userid := r.Header.Get("userid")
-		user, err := mcpemapcore.LoadUserInfo(userid)
-		if hasFailed(wr, err) {
-			return
-		}
-
+		user := GetUser(wr, r)
 		fmt.Printf("Request: user favorites for user %v\n", user.Id)
 		mapResponse.Maps, err = mcpemapcore.GetFavoriteMaps(user, r.Host)
 		break
@@ -93,6 +92,15 @@ func GetMaps(wr http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Fatal(err)
 	}
+}
+
+func GetUser(wr http.ResponseWriter, r *http.Request) *mcpemapcore.User {
+	userid := r.Header.Get("userid")
+	user, err := mcpemapcore.LoadUserInfo(userid)
+	if hasFailed(wr, err) {
+		return nil
+	}
+	return user
 }
 
 type LogHandler struct {
@@ -138,6 +146,81 @@ func HelloServer(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "hello, world!\n")
 }
 
+func Upload(w http.ResponseWriter, req *http.Request) {
+	var err error
+	user := GetUser(w, req)
+
+	if user != nil {
+
+		filename, _ := GenUUID()
+		filename += ".zip"
+
+		if !mcpemapcore.Exists("uploads") {
+			err = os.Mkdir("uploads", 0777)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		if !mcpemapcore.Exists("uploads/" + user.Username) {
+			err = os.Mkdir("uploads/"+user.Username, 0777)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		formFile, _, err := req.FormFile("TheFile")
+		if err != nil {
+			return
+		}
+
+		defer formFile.Close()
+
+		osFile, err := os.Create("uploads/" + user.Username + "/" + filename)
+		if err != nil {
+			return
+		}
+		defer osFile.Close()
+
+		count, err := io.Copy(osFile, formFile)
+
+		if err != nil {
+			return
+		}
+
+		type FileName struct {
+			Filename string
+		}
+
+		fn := FileName{Filename: filename}
+
+		buffer, _ := json.Marshal(fn)
+
+		w.Write(buffer) //ignore errors
+		fmt.Printf("Upload complete: %v bytes\n", count)
+	}
+}
+
+func GenUUID() (string, error) {
+
+	uuid := make([]byte, 16)
+
+	n, err := rand.Read(uuid)
+
+	if n != len(uuid) || err != nil {
+		return "", err
+	}
+
+	// TODO: verify the two lines implement RFC 4122 correctly
+
+	uuid[8] = 0x80 // variant bits see page 5
+
+	uuid[4] = 0x40 // version 4 Pseudo Random, see page 7
+
+	return hex.EncodeToString(uuid), nil
+
+}
+
 func main() {
 	useSsl := flag.Bool("ssl", false, "enable SSL")
 	flag.Parse()
@@ -155,6 +238,7 @@ func main() {
 	http.HandleFunc("/getuserfavorites", auth.CorsOptions(auth.RequireTokenAuthentication(GetMaps)))
 	http.HandleFunc("/admin/getbadmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(GetBadMapList)))
 	http.HandleFunc("/admin/updatemapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(UpdateMapFromUpload)))
+	http.HandleFunc("/upload", auth.CorsOptions(auth.RequireTokenAuthentication(Upload)))
 	// use http.stripprefix to redirect
 	//http.Handle("/maps/", http.FileServer(http.Dir(".")))
 	http.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))
