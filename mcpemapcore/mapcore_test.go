@@ -11,3 +11,10 @@ func TestGetZipThruProxy(t *testing.T) {
 	fmt.Printf("%v %v\n", hash, success)
 
 }
+func TestMySqlGetAllMaps(t *testing.T) {
+	maps, err := MySqlGetAllMaps(0, 0, "")
+	if err != nil {
+		t.Fail()
+	}
+	fmt.Printf("got %v\n", len(maps))
+}

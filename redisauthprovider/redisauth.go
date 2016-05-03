@@ -68,3 +68,17 @@ func hashPw(password string) string {
 	hasher.Write([]byte(password))
 	return string(hasher.Sum(nil))
 }
+
+func getRoleListForUser(userid string) ([]int, error) {
+	v, err := redis.Strings(conn.Do("SMEMBERS", "userroles:"+userid))
+	if err != nil {
+		return nil, err
+	}
+
+	var values []int
+	for _, e := range v {
+		val, _ := strconv.Atoi(e)
+		values = append(values, val)
+	}
+	return values, nil
+}

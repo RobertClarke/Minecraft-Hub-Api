@@ -2,6 +2,7 @@ package main
 
 import (
 	"clarkezone-vs-com/mcpemapcore"
+	"clarkezone-vs-com/mysqlauthprovider"
 	"clarkezone-vs-com/redisauthprovider"
 	"crypto/rand"
 	"encoding/hex"
@@ -13,7 +14,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path"
 
 	"github.com/clarkezone/jwtauth"
 )
@@ -62,19 +62,19 @@ func GetMaps(wr http.ResponseWriter, r *http.Request) {
 	switch r.RequestURI {
 	case "/getmaplist":
 		fmt.Println("Request: All maps")
-		mapResponse.Maps, _, err = mcpemapcore.GetAllMapsFromRedis(0, 12, r.Host)
+		mapResponse.Maps, _, err = mcpemapcore.GetAllMaps(0, 12, r.Host)
 		break
 	case "/getfeaturedmaplist":
 		fmt.Println("Request: featured maps")
-		mapResponse.Maps, _, err = mcpemapcore.GetFeaturedMapsFromRedis(0, 8, r.Host)
+		mapResponse.Maps, _, err = mcpemapcore.GetFeaturedMaps(0, 8, r.Host)
 		break
 	case "/getmostdownloaded":
 		fmt.Println("Request: most downloaded")
-		mapResponse.Maps, _, err = mcpemapcore.GetMostDownloadedMapsFromRedis(0, 8, r.Host)
+		mapResponse.Maps, _, err = mcpemapcore.GetMostDownloadedMaps(0, 8, r.Host)
 		break
 	case "/getmostfavorited":
 		fmt.Println("Request: most favorited")
-		mapResponse.Maps, _, err = mcpemapcore.GetMostFavoritedMapsFromRedis(0, 8, r.Host)
+		mapResponse.Maps, _, err = mcpemapcore.GetMostFavoritedMaps(0, 8, r.Host)
 		break
 	case "/getuserfavorites":
 		user := GetUser(wr, r)
@@ -114,11 +114,11 @@ func CreateLogHandler(h http.Handler) http.Handler {
 }
 
 func (h LogHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	_, fn := path.Split(r.RequestURI)
-	wp := path.Ext(fn)
-	fnnp := fn[:len(fn)-len(wp)]
-	fmt.Println("file:" + wp)
-	mcpemapcore.UpdateMapDownloadCount(fnnp)
+	//	_, fn := path.Split(r.RequestURI)
+	//	wp := path.Ext(fn)
+	//	fnnp := fn[:len(fn)-len(wp)]
+	//	fmt.Println("file:" + wp)
+	//	mcpemapcore.UpdateMapDownloadCount(fnnp)
 	h.wrapper.ServeHTTP(rw, r)
 }
 
@@ -224,7 +224,8 @@ func GenUUID() (string, error) {
 func main() {
 	useSsl := flag.Bool("ssl", false, "enable SSL")
 	flag.Parse()
-	var provider = redisauth.RedisUserProvider{}
+	//var provider = redisauth.RedisUserProvider{}
+	var provider = mysqlauth.MysqlAuthProvider{}
 	auth := jwtauth.CreateApiSecurity(provider)
 	auth.RegisterLoginHandlers()
 	redisauth.RegisterUserRegistrationHandler()

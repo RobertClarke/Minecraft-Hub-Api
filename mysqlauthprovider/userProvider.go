@@ -1,11 +1,11 @@
-package redisauth
+package mysqlauth
 
 import "fmt"
 
-type RedisUserProvider struct {
+type MysqlAuthProvider struct {
 }
 
-func (a RedisUserProvider) Login(username string, password string) (result bool, userid string) {
+func (a MysqlAuthProvider) Login(username string, password string) (result bool, userid string) {
 	err, id := login(username, password)
 	if err != nil {
 		fmt.Printf("Login:Error:%v", err.Error())
@@ -16,7 +16,7 @@ func (a RedisUserProvider) Login(username string, password string) (result bool,
 	return true, id
 }
 
-func (a RedisUserProvider) GetRoles(userid string) []int {
+func (a MysqlAuthProvider) GetRoles(userid string) []int {
 	roles, _ := getRoleListForUser(userid)
 	return roles
 }

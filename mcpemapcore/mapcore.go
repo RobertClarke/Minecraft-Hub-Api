@@ -135,6 +135,7 @@ func WriteNextMap(object map[string]interface{}, good bool, mapfilehash string) 
 func UpdateMapDownloadCount(fileHash string) error {
 	var err error
 	var mapId string
+	fmt.Printf("Download Hash:%v\n", fileHash)
 	mapId, err = redis.String(conn.Do("HGET", "mapfilehash:"+fileHash, "id"))
 	if err != nil {
 		log.Fatal(err)
@@ -369,24 +370,32 @@ func GetMapImageFromRedis(mapImageId string, siteRoot string) (*MapImage, error)
 	return u, nil
 }
 
-func GetAllMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	return GetMapsFromRedis(start, count, siteRoot, "goodmapset", false)
+func GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	//return GetMapsFromRedis(start, count, siteRoot, "goodmapset", false)
+	maps, err := MySqlGetAllMaps(int(start), int(count), siteRoot)
+	return maps, -1, err
 }
 
-func GetFeaturedMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	return GetMapsFromRedis(start, count, siteRoot, "featuredmapset", false)
+func GetFeaturedMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	//return GetMapsFromRedis(start, count, siteRoot, "featuredmapset", false)
+	maps, err := MySqlGetFeaturedMaps(int(start), int(count), siteRoot)
+	return maps, -1, err
 }
 
-func GetMostDownloadedMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	return GetMapsFromRedis(start, count, siteRoot, "mostdownloaded", true)
+func GetMostDownloadedMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	//return GetMapsFromRedis(start, count, siteRoot, "mostdownloaded", true)
+	maps, err := MySqlGetMostDownloadedMaps(int(start), int(count), siteRoot)
+	return maps, -1, err
 }
 
-func GetMostFavoritedMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
+func GetMostFavoritedMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
 	return GetMapsFromRedis(start, count, siteRoot, "mostfavorited", true)
 }
 
-func GetBadMapsFromRedis(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	return GetMapsFromRedis(start, count, siteRoot, "badmapset", true)
+func GetBadMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	//return GetMapsFromRedis(start, count, siteRoot, "badmapset", true)
+	maps, err := MySqlGetBadMaps(int(start), int(count), siteRoot)
+	return maps, -1, err
 }
 
 func GetMapsFromRedis(start, count int64, siteRoot string, keyName string, reverse bool) ([]*Map, int64, error) {
@@ -418,7 +427,8 @@ func GetMapsFromRedis(start, count int64, siteRoot string, keyName string, rever
 func DownloadContent(uri string, dir string, acceptMime string, ext string) (bool, string) {
 	resp, err := http.Get(uri)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("bad uri:%v error:%v\n", uri, err.Error())
+		return false, ""
 	}
 	defer resp.Body.Close()
 	headerType := resp.Header.Get("Content-Type")

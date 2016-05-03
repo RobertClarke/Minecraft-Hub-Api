@@ -55,9 +55,8 @@ func GetBadMapList(wr http.ResponseWriter, r *http.Request) {
 	if jwtauth.IsInRole(role.Id, r) {
 		var mapResponse MapListResponse
 		var err error
-		//fmt.Printf("Request:%+v", r)
-		//fmt.Println("Request: admin Get Bad Map List")
-		mapResponse.Maps, _, err = mcpemapcore.GetBadMapsFromRedis(0, 8, r.Host)
+		//mapResponse.Maps, _, err = mcpemapcore.GetBadMapsFromRedis(0, 8, r.Host)
+		mapResponse.Maps, _, err = mcpemapcore.GetBadMaps(0, 8, r.Host)
 		if hasFailed(wr, err) {
 			return
 		}

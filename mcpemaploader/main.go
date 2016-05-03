@@ -13,6 +13,7 @@ import (
 func main() {
 	showstats := flag.Bool("stats", false, "displays database stats")
 	doimport := flag.Bool("import", false, "Import records from mcpehub")
+	doMySqlimport := flag.Bool("mysqlimport", false, "Import records from mcpehub direct from mysql")
 	makeAdmin := flag.String("makeadmin", "", "If user with this username exists, make them admin")
 	flag.Parse()
 	if *showstats {
@@ -20,6 +21,9 @@ func main() {
 	}
 	if *doimport {
 		GetWriteMapsFromService()
+	}
+	if *doMySqlimport {
+		GetWriteMapsFromMySqlService()
 	}
 	if *makeAdmin != "" {
 		makeUserAdmin(*makeAdmin)
@@ -51,6 +55,27 @@ func dumpStats() {
 	fmt.Printf("Total good featured maps:%v\n", s.Total_good_featured)
 	fmt.Printf("Total bad featuered maps:%v\n", s.Total_bad_featured)
 	//fmt.Printf("Total featured maps:%v", s.Total_maps)
+}
+
+func GetWriteMapsFromMySqlService() {
+	maps, _ := mcpemapcore.MySqlGetAllMaps(1001, 4000, "")
+	var count = 0
+	for i := range maps {
+		count++
+		fmt.Printf("Map %v\n", count)
+		themap := maps[i]
+		fmt.Printf("downloaduri %v\n", themap.MapDownloadUri)
+		success, hash := mcpemapcore.DownloadContent(themap.MapDownloadUri, "maps", "application/zip", "zip")
+		if success {
+			fmt.Println("Valid:"+themap.MapDownloadUri, false, hash)
+			mcpemapcore.MySqlUpdateMap(themap, true, hash)
+			//mcpemapcore.WriteNextMap(cool, true, hash)
+		} else {
+			mcpemapcore.MySqlUpdateMap(themap, false, hash)
+			//mcpemapcore.WriteNextMap(cool, false, hash)
+			fmt.Println("Invalid:"+themap.MapDownloadUri, false, hash)
+		}
+	}
 }
 
 func GetWriteMapsFromService() {
