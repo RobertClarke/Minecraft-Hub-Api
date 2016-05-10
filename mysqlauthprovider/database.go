@@ -2,10 +2,12 @@ package mysqlauth
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"strconv"
+
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
-	"strconv"
 )
 
 func login(un string, pw string) (funcerr error, userid string) {
@@ -19,9 +21,16 @@ func login(un string, pw string) (funcerr error, userid string) {
 		password string
 	)
 
+	var count int
+
 	for rows.Next() {
+		count++
 		err = rows.Scan(&id, &name, &password)
 		fmt.Printf("id: %v name:%v password:%v\n", id, name, password)
+	}
+
+	if count == 0 {
+		return errors.New("unable to login"), ""
 	}
 
 	var hashed []byte

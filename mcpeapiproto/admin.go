@@ -11,7 +11,11 @@ import (
 	"github.com/clarkezone/jwtauth"
 )
 
-func UpdateMapFromUpload(wr http.ResponseWriter, r *http.Request) {
+type AdminMapListResponse struct {
+	Maps []*mcpemapcore.AdminMap
+}
+
+func AdminUpdateMapFromUpload(wr http.ResponseWriter, r *http.Request) {
 	role := mcpemapcore.GetRole("Administrator")
 
 	if jwtauth.IsInRole(role.Id, r) {
@@ -40,23 +44,44 @@ func UpdateMapFromUpload(wr http.ResponseWriter, r *http.Request) {
 
 		fmt.Printf("update map %v id with filehash %v\n", parsedParams.MapId, parsedParams.UploadHash)
 
-		mcpemapcore.UpdateMap(user, parsedParams.MapId, parsedParams.UploadHash)
+		mcpemapcore.AdminUpdateMap(user, parsedParams.MapId, parsedParams.UploadHash)
 
 	} else {
 		wr.WriteHeader(http.StatusUnauthorized)
 	}
 }
 
-func GetBadMapList(wr http.ResponseWriter, r *http.Request) {
+func AdminGetBadMapList(wr http.ResponseWriter, r *http.Request) {
 	var role mcpemapcore.Role
 	role = mcpemapcore.GetRole("Administrator")
-	//fmt.Printf("GetBadMapList:role:%v %v\n", role, role.Id)
 
 	if jwtauth.IsInRole(role.Id, r) {
-		var mapResponse MapListResponse
+		var mapResponse AdminMapListResponse
 		var err error
-		//mapResponse.Maps, _, err = mcpemapcore.GetBadMapsFromRedis(0, 8, r.Host)
-		mapResponse.Maps, _, err = mcpemapcore.GetBadMaps(0, 8, r.Host)
+		mapResponse.Maps, _, err = mcpemapcore.AdminGetBadMaps(0, 8, r.Host)
+		if hasFailed(wr, err) {
+			return
+		}
+		bytes, err := json.Marshal(mapResponse)
+		if err == nil {
+			wr.Header().Set("Content-Type", "application/json")
+			wr.Write(bytes)
+		} else {
+			log.Fatal(err)
+		}
+	} else {
+		wr.WriteHeader(http.StatusUnauthorized)
+	}
+}
+
+func AdminGetEditedMapList(wr http.ResponseWriter, r *http.Request) {
+	var role mcpemapcore.Role
+	role = mcpemapcore.GetRole("Administrator")
+
+	if jwtauth.IsInRole(role.Id, r) {
+		var mapResponse AdminMapListResponse
+		var err error
+		mapResponse.Maps, _, err = mcpemapcore.AdminGetEditedMaps(0, 8, r.Host)
 		if hasFailed(wr, err) {
 			return
 		}

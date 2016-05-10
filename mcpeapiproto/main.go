@@ -237,8 +237,9 @@ func main() {
 	http.HandleFunc("/getmostfavorited", auth.CorsOptions(GetMaps))
 	http.HandleFunc("/setfavoritemap", auth.CorsOptions(auth.RequireTokenAuthentication(UpdateFavoriteMap)))
 	http.HandleFunc("/getuserfavorites", auth.CorsOptions(auth.RequireTokenAuthentication(GetMaps)))
-	http.HandleFunc("/admin/getbadmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(GetBadMapList)))
-	http.HandleFunc("/admin/updatemapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(UpdateMapFromUpload)))
+	http.HandleFunc("/admin/getbadmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetBadMapList)))
+	http.HandleFunc("/admin/geteditedmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetEditedMapList)))
+	http.HandleFunc("/admin/updatemapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(AdminUpdateMapFromUpload)))
 	http.HandleFunc("/upload", auth.CorsOptions(auth.RequireTokenAuthentication(Upload)))
 	// use http.stripprefix to redirect
 	//http.Handle("/maps/", http.FileServer(http.Dir(".")))

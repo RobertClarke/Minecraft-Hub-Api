@@ -9,7 +9,6 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
@@ -20,12 +19,16 @@ const (
 )
 
 var (
-	conn        redis.Conn
-	rolesByName map[string]*Role
-	rolesById   map[int]*Role
+	conn           redis.Conn
+	rolesByName    map[string]*Role
+	rolesById      map[int]*Role
+	currentBackend *MySqlBackend
 )
 
 func init() {
+
+	currentBackend = &MySqlBackend{}
+
 	fmt.Println("mcpemapcoreinit")
 
 	rolesByName = make(map[string]*Role)
@@ -156,49 +159,6 @@ func UpdateMapDownloadCount(fileHash string) error {
 		fmt.Printf("NOT found map id for file %d", fileHash)
 	}
 	return err
-}
-
-func UpdateMap(user *User, mapid int, uploadFilename string) error {
-
-	var pureHash = strings.NewReplacer(".zip", "").Replace(uploadFilename)
-
-	var err error
-	if user != nil {
-		sourceDir := "uploads/" + user.Username + "/" + uploadFilename
-		destDir := "Maps/" + uploadFilename
-		os.Rename(sourceDir, destDir)
-	}
-	if err != nil {
-		return err
-	}
-	_, err = conn.Do("HSET", "map:"+strconv.Itoa(mapid), "mapfilehash", pureHash)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = conn.Do("HSET", "mapfilehash:"+pureHash, "id", strconv.Itoa(mapid))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var nextGood int
-	nextGood, err = redis.Int(conn.Do("INCR", "next_good"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = conn.Do("ZADD", "goodmapset", nextGood, mapid)
-	if err != nil {
-		log.Fatal(err)
-	}
-	badid, err := redis.Int(conn.Do("ZSCORE", "badmapset", mapid))
-	if err != nil {
-		log.Fatal(err)
-	}
-	//nextBad, err = redis.Int(conn.Do("INCR", "next_bad"))
-	_, err = conn.Do("ZREM", "badmapset", badid, mapid)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return nil
 }
 
 func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash string) error {
@@ -390,12 +350,6 @@ func GetMostDownloadedMaps(start, count int64, siteRoot string) ([]*Map, int64, 
 
 func GetMostFavoritedMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
 	return GetMapsFromRedis(start, count, siteRoot, "mostfavorited", true)
-}
-
-func GetBadMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	//return GetMapsFromRedis(start, count, siteRoot, "badmapset", true)
-	maps, err := MySqlGetBadMaps(int(start), int(count), siteRoot)
-	return maps, -1, err
 }
 
 func GetMapsFromRedis(start, count int64, siteRoot string, keyName string, reverse bool) ([]*Map, int64, error) {

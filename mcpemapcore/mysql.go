@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -13,7 +14,7 @@ func MySqlGetAllMaps(start, count int, siteRoot string) ([]*Map, error) {
 	sqlQuery := "select " + getMapFields() + `
 	from content_maps
 	where valid_direct_uri=1
-	order by submitted
+	order by edited desc
 	limit ?, ?`
 	return MySqlQueryMaps(sqlQuery, siteRoot, start, count)
 }
@@ -36,13 +37,25 @@ func MySqlGetMostDownloadedMaps(start, count int, siteRoot string) ([]*Map, erro
 	return MySqlQueryMaps(sqlQuery, siteRoot, start, count)
 }
 
-func MySqlGetBadMaps(start, count int, siteRoot string) ([]*Map, error) {
-	sqlQuery := "select " + getMapFields() + `
+func MySqlAdminGetBadMaps(start, count int, siteRoot string) ([]*AdminMap, error) {
+	fmt.Printf("getsqlbadmaps\n")
+	sqlQuery := "select " + getAdminMapFields() + `
 	from content_maps
+	inner join users on users.id=content_maps.editor_id
 	where valid_direct_uri=0
 	order by published desc
 	limit ?, ?`
-	return MySqlQueryMaps(sqlQuery, siteRoot, start, count)
+	return MySqlQueryAdminMaps(sqlQuery, siteRoot, start, count)
+}
+
+func MySqlAdminGetEditedMaps(start, count int, siteRoot string) ([]*AdminMap, error) {
+	fmt.Printf("getsqleditedmaps\n")
+	sqlQuery := "select " + getAdminMapFields() + `
+	from content_maps
+	inner join users on users.id=content_maps.editor_id
+	order by edited desc
+	limit ?, ?`
+	return MySqlQueryAdminMaps(sqlQuery, siteRoot, start, count)
 }
 
 func MySqlQueryMaps(sqlQuery string, siteRoot string, args ...interface{}) ([]*Map, error) {
@@ -58,11 +71,24 @@ func MySqlQueryMaps(sqlQuery string, siteRoot string, args ...interface{}) ([]*M
 	return items, err
 }
 
+func MySqlQueryAdminMaps(sqlQuery string, siteRoot string, args ...interface{}) ([]*AdminMap, error) {
+	rows, err := getRowsParam(sqlQuery, args...)
+	if err != nil {
+		fmt.Printf("error: %v\n", err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+
+	items, err := scanAdminMaps(rows, siteRoot)
+	fmt.Printf("found %v maps\n", len(items))
+	return items, err
+}
+
 func getRowsParam(sqlQuery string, args ...interface{}) (*sql.Rows, error) {
 	var err error
 	var db *sql.DB
 
-	db, err = sql.Open("mysql", `clarkezone:winBlue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2`)
+	db, err = sql.Open("mysql", `clarkezone:winBlue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2?parseTime=true`)
 	defer db.Close()
 
 	if err != nil {
@@ -85,7 +111,7 @@ func getRowsParam(sqlQuery string, args ...interface{}) (*sql.Rows, error) {
 
 }
 
-func MySqlUpdateMap(theMap *Map, valid bool, uriHash string) {
+func MySqlUpdateMapValid(theMap *Map, valid bool, uriHash string) {
 	sqlQuery := `update content_maps
 	set valid_direct_uri=?, file_hash=?
 	where id=?
@@ -100,6 +126,18 @@ func MySqlUpdateMap(theMap *Map, valid bool, uriHash string) {
 		fmt.Printf("error updating map: %v\n", err)
 	}
 }
+
+func MySqlUpdateMapNewUpload(user *User, mapid int, hash string) {
+	sqlQuery := `update content_maps
+	set valid_direct_uri=1, file_hash=?, editor_id=?, edited=current_timestamp()
+	where id=?
+	`
+	err := execParam(sqlQuery, hash, user.Id, mapid)
+	if err != nil {
+		fmt.Printf("error updating map: %v\n", err)
+	}
+}
+
 func getMapFields() string {
 	fields := []string{
 		"id",
@@ -151,7 +189,101 @@ func scanMaps(rows *sql.Rows, siteRoot string) ([]*Map, error) {
 		}
 
 		if newMap.MapFileHash != "" {
-			newMap.MapDownloadUri = fmt.Sprintf("%v/maps/%v.zip", siteRoot, mapfilehash)
+			newMap.MapDownloadUri = fmt.Sprintf("%v/maps/%v.zip", siteRoot, string(mapfilehash))
+		}
+
+		if tested == 1 {
+			newMap.Tested = true
+		} else {
+
+			newMap.Tested = false
+		}
+
+		if featured == 1 {
+			newMap.Featured = true
+		} else {
+
+			newMap.Featured = false
+		}
+
+		imagenames := strings.Split(imageList, ",")
+
+		for i := range imagenames {
+			mi := &MapImage{}
+			mi.MapImageUri = fmt.Sprintf("mcpehub.com/uploads/720x500/maps/%v", imagenames[i])
+			fmt.Printf("%v\n", mi.MapImageUri)
+			newMap.MapImageUriList = append(newMap.MapImageUriList, mi)
+		}
+
+		items = append(items, newMap)
+	}
+
+	return items, nil
+
+}
+
+func getAdminMapFields() string {
+	fields := []string{
+		"content_maps.id as id",
+		"title",
+		"description",
+		"dl_link",
+		"file_hash",
+		"editor_id",
+		"username",
+		"edited",
+		"tested",
+		"content_maps.featured as featured",
+		"downloads",
+		"images",
+	}
+	return strings.Join(fields, ",")
+}
+
+func scanAdminMaps(rows *sql.Rows, siteRoot string) ([]*AdminMap, error) {
+	var err error
+	items := make([]*AdminMap, 0)
+
+	var title, description, dllink, imageList, editedByString string
+	var mapfilehash []byte
+	var id, tested, downloads, featured, editedbyid int
+	var edited time.Time
+	for rows.Next() {
+		err = rows.Scan(
+			&id,
+			&title,
+			&description,
+			&dllink,
+			//originaluri
+			&mapfilehash,
+			//author
+			//authoruri
+			&editedbyid,
+			&editedByString,
+			&edited,
+			//numviews
+			&tested,
+			&featured,
+			&downloads,
+			//favoritecount
+			&imageList)
+		if err != nil {
+			fmt.Printf("error: %v\n", err.Error())
+			return nil, err
+		}
+
+		newMap := &AdminMap{Id: strconv.Itoa(id),
+			MapTitle:       title,
+			Description:    description,
+			MapDownloadUri: dllink,
+			MapFileHash:    string(mapfilehash),
+			DownloadCount:  int64(downloads),
+			EditedById:     editedbyid,
+			EditedByString: editedByString,
+			Edited:         edited}
+
+		if newMap.MapFileHash != "" {
+			newMap.MapDownloadUri = fmt.Sprintf("%v/maps/%v.zip", siteRoot, string(mapfilehash))
 		}
 
 		if tested == 1 {
