@@ -1,9 +1,9 @@
 package main
 
 import (
-	"clarkezone-vs-com/mcpemapcore"
-	"clarkezone-vs-com/mysqlauthprovider"
-	"clarkezone-vs-com/redisauthprovider"
+	"clarkezonegit/Minecraft-Hub-Api/mcpemapcore"
+	"clarkezonegit/Minecraft-Hub-Api/mysqlauthprovider"
+	"clarkezonegit/Minecraft-Hub-Api/redisauthprovider"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -152,6 +152,7 @@ func Upload(w http.ResponseWriter, req *http.Request) {
 
 	if user != nil {
 
+		fmt.Printf("we have a user with name %v\n", user.Username)
 		filename, _ := GenUUID()
 		filename += ".zip"
 
@@ -171,21 +172,21 @@ func Upload(w http.ResponseWriter, req *http.Request) {
 
 		formFile, _, err := req.FormFile("TheFile")
 		if err != nil {
-			return
+			log.Fatal(err)
 		}
 
 		defer formFile.Close()
 
 		osFile, err := os.Create("uploads/" + user.Username + "/" + filename)
 		if err != nil {
-			return
+			log.Fatal(err)
 		}
 		defer osFile.Close()
 
 		count, err := io.Copy(osFile, formFile)
 
 		if err != nil {
-			return
+			log.Fatal(err)
 		}
 
 		type FileName struct {
@@ -198,6 +199,9 @@ func Upload(w http.ResponseWriter, req *http.Request) {
 
 		w.Write(buffer) //ignore errors
 		fmt.Printf("Upload complete: %v bytes\n", count)
+	} else {
+		fmt.Printf("shit no user")
+		log.Fatal()
 	}
 }
 
@@ -246,10 +250,11 @@ func main() {
 	http.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))
 	http.Handle("/mapimages/", http.FileServer(http.Dir(".")))
 	if *useSsl {
-		fmt.Printf("Listening for TLS on 8080\n")
-		panic(http.ListenAndServeTLS(":8080", "dev.objectivepixel.com.crt", "dev.objectivepixel.com.key", nil))
+		fmt.Printf("Listening for TLS on 80\n")
+		//panic(http.ListenAndServeTLS(":80", "dev.objectivepixel.com.crt", "dev.objectivepixel.com.key", nil))
+		panic(http.ListenAndServeTLS(":443", "dev2.minecrafthub.com.crt", "dev2.minecrafthub.com.key", nil))
 	} else {
-		fmt.Printf("Listening for HTTP on 8080\n")
-		panic(http.ListenAndServe(":8080", nil))
+		fmt.Printf("Listening for HTTP on 80\n")
+		panic(http.ListenAndServe(":80", nil))
 	}
 }

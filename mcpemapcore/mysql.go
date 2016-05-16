@@ -19,6 +19,14 @@ func MySqlGetAllMaps(start, count int, siteRoot string) ([]*Map, error) {
 	return MySqlQueryMaps(sqlQuery, siteRoot, start, count)
 }
 
+func MySqlGetAllMapsInclUntested(start, count int, siteRoot string) ([]*Map, error) {
+	sqlQuery := "select " + getMapFields() + `
+	from content_maps
+	order by edited desc
+	limit ?, ?`
+	return MySqlQueryMaps(sqlQuery, siteRoot, start, count)
+}
+
 func MySqlGetFeaturedMaps(start, count int, siteRoot string) ([]*Map, error) {
 	sqlQuery := "select " + getMapFields() + `
 	from content_maps
@@ -56,6 +64,37 @@ func MySqlAdminGetEditedMaps(start, count int, siteRoot string) ([]*AdminMap, er
 	order by edited desc
 	limit ?, ?`
 	return MySqlQueryAdminMaps(sqlQuery, siteRoot, start, count)
+}
+
+func MySqlGetUserInfo(userid string) (*User, error) {
+	var err error
+	fmt.Printf("mysqlgetuserinfo\n")
+	sqlQuery := `select id, username 
+	from users
+	where id=?`
+	us, err := MySqlQueryUsers(sqlQuery, userid)
+	if err != nil {
+		return nil, err
+	}
+	if len(us) == 1 {
+		return us[0], err
+	} else {
+		fmt.Printf("user not found")
+		return nil, err
+	}
+}
+
+func MySqlQueryUsers(sqlQuery string, args ...interface{}) ([]*User, error) {
+	rows, err := getRowsParam(sqlQuery, args...)
+	if err != nil {
+		fmt.Printf("error: %v\n", err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+
+	items, err := scanUsers(rows)
+	fmt.Printf("found %v users\n", len(items))
+	return items, err
 }
 
 func MySqlQueryMaps(sqlQuery string, siteRoot string, args ...interface{}) ([]*Map, error) {
@@ -222,6 +261,31 @@ func scanMaps(rows *sql.Rows, siteRoot string) ([]*Map, error) {
 
 }
 
+func scanUsers(rows *sql.Rows) ([]*User, error) {
+	var err error
+	items := make([]*User, 0)
+
+	var username string
+	var id int
+	for rows.Next() {
+		err = rows.Scan(
+			&id,
+			&username)
+		if err != nil {
+			fmt.Printf("error: %v\n", err.Error())
+			return nil, err
+		}
+
+		newMap := &User{Id: strconv.Itoa(id),
+			Username: username,
+		}
+
+		items = append(items, newMap)
+	}
+
+	return items, nil
+
+}
 func getAdminMapFields() string {
 	fields := []string{
 		"content_maps.id as id",

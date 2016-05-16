@@ -21,7 +21,8 @@ func LoadUserByUsername(username string) (*User, error) {
 	return user, err
 }
 
-func LoadUserInfo(userId string) (*User, error) {
+func RedisLoadUserInfo(userId string) (*User, error) {
+
 	v, err := redis.Values(conn.Do("HGETALL", "user:"+userId))
 	if err != nil {
 		return nil, err

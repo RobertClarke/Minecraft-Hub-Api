@@ -48,8 +48,8 @@ func AdminUpdateMap(user *User, mapid int, uploadFilename string) error {
 	var err error
 	if user != nil {
 		sourceDir := "uploads/" + user.Username + "/" + uploadFilename
-		destDir := "Maps/" + uploadFilename
-		os.Rename(sourceDir, destDir)
+		destDir := "maps/" + uploadFilename
+		err = os.Rename(sourceDir, destDir)
 	}
 	if err != nil {
 		return err

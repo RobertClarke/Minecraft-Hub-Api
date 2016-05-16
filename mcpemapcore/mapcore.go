@@ -87,6 +87,7 @@ func init() {
 	if nil != err {
 		log.Fatalln("Error: Connection to redis:", err)
 	}
+	fmt.Printf("redis is alive\n")
 	if !Exists("maps") {
 		err = os.Mkdir("maps", 0777)
 		if err != nil {
@@ -102,12 +103,13 @@ func init() {
 }
 
 func Exists(path string) bool {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return false
-		} else {
-			log.Fatal(err)
-		}
+	fmt.Printf("exists:%v\n", path)
+	_, err := os.Stat(path)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	} else if err != nil {
+		fmt.Printf(err.Error())
+		log.Fatal(err)
 	}
 	return true
 }
@@ -538,6 +540,10 @@ func UpdateFavoriteMap(u *User, mapId string, fav bool) error {
 	}
 
 	return nil
+}
+
+func LoadUserInfo(userId string) (*User, error) {
+	return currentBackend.LoadUserInfo(userId)
 }
 
 func GetFavoriteMaps(u *User, siteRoot string) ([]*Map, error) {

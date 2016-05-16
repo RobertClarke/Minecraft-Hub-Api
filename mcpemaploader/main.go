@@ -1,7 +1,7 @@
 package main
 
 import (
-	"clarkezone-vs-com/mcpemapcore"
+	"clarkezonegit/Minecraft-Hub-Api/mcpemapcore"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -58,7 +58,7 @@ func dumpStats() {
 }
 
 func GetWriteMapsFromMySqlService() {
-	maps, _ := mcpemapcore.MySqlGetAllMaps(1001, 4000, "")
+	maps, _ := mcpemapcore.MySqlGetAllMapsInclUntested(7001, 10000, "")
 	var count = 0
 	for i := range maps {
 		count++
@@ -68,10 +68,10 @@ func GetWriteMapsFromMySqlService() {
 		success, hash := mcpemapcore.DownloadContent(themap.MapDownloadUri, "maps", "application/zip", "zip")
 		if success {
 			fmt.Println("Valid:"+themap.MapDownloadUri, false, hash)
-			mcpemapcore.MySqlUpdateMap(themap, true, hash)
+			mcpemapcore.MySqlUpdateMapValid(themap, true, hash)
 			//mcpemapcore.WriteNextMap(cool, true, hash)
 		} else {
-			mcpemapcore.MySqlUpdateMap(themap, false, hash)
+			mcpemapcore.MySqlUpdateMapValid(themap, false, hash)
 			//mcpemapcore.WriteNextMap(cool, false, hash)
 			fmt.Println("Invalid:"+themap.MapDownloadUri, false, hash)
 		}

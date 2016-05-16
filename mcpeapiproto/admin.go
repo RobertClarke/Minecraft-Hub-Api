@@ -1,7 +1,7 @@
 package main
 
 import (
-	"clarkezone-vs-com/mcpemapcore"
+	"clarkezonegit/Minecraft-Hub-Api/mcpemapcore"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -20,6 +20,9 @@ func AdminUpdateMapFromUpload(wr http.ResponseWriter, r *http.Request) {
 
 	if jwtauth.IsInRole(role.Id, r) {
 		user := GetUser(wr, r)
+		if user == nil {
+			fmt.Printf("shit user is nil after get user\n")
+		}
 		type UpdateMapParams struct {
 			MapId      int    `json:"mapId"`
 			UploadHash string `json:"uploadHash"`
@@ -44,8 +47,12 @@ func AdminUpdateMapFromUpload(wr http.ResponseWriter, r *http.Request) {
 
 		fmt.Printf("update map %v id with filehash %v\n", parsedParams.MapId, parsedParams.UploadHash)
 
-		mcpemapcore.AdminUpdateMap(user, parsedParams.MapId, parsedParams.UploadHash)
+		err = mcpemapcore.AdminUpdateMap(user, parsedParams.MapId, parsedParams.UploadHash)
 
+		if hasFailed(wr, err) {
+			fmt.Printf("Failed to unmarshall%v\n", err.Error())
+			return
+		}
 	} else {
 		wr.WriteHeader(http.StatusUnauthorized)
 	}
