@@ -1,9 +1,6 @@
 package main
 
 import (
-	"clarkezonegit/Minecraft-Hub-Api/mcpemapcore"
-	"clarkezonegit/Minecraft-Hub-Api/mysqlauthprovider"
-	"clarkezonegit/Minecraft-Hub-Api/redisauthprovider"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -14,6 +11,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
+
+	"github.com/robertclarke/Minecraft-Hub-Api/mcpemapcore"
+	"github.com/robertclarke/Minecraft-Hub-Api/mysqlauthprovider"
+	"github.com/robertclarke/Minecraft-Hub-Api/redisauthprovider"
 
 	"github.com/clarkezone/jwtauth"
 )
@@ -114,11 +116,11 @@ func CreateLogHandler(h http.Handler) http.Handler {
 }
 
 func (h LogHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-		_, fn := path.Split(r.RequestURI)
-		wp := path.Ext(fn)
-		fnnp := fn[:len(fn)-len(wp)]
-		fmt.Println("file:" + wp)
-		mcpemapcore.UpdateMapDownloadCount(fnnp)
+	_, fn := path.Split(r.RequestURI)
+	wp := path.Ext(fn)
+	fnnp := fn[:len(fn)-len(wp)]
+	fmt.Println("file:" + wp)
+	mcpemapcore.UpdateMapDownloadCount(fnnp)
 	h.wrapper.ServeHTTP(rw, r)
 }
 

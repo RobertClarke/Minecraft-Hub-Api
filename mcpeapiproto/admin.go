@@ -1,9 +1,9 @@
 package main
 
 import (
-	"clarkezonegit/Minecraft-Hub-Api/mcpemapcore"
 	"encoding/json"
 	"fmt"
+	"github.com/robertclarke/Minecraft-Hub-Api/mcpemapcore"
 	"io/ioutil"
 	"log"
 	"net/http"
