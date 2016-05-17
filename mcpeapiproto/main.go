@@ -114,11 +114,11 @@ func CreateLogHandler(h http.Handler) http.Handler {
 }
 
 func (h LogHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	//	_, fn := path.Split(r.RequestURI)
-	//	wp := path.Ext(fn)
-	//	fnnp := fn[:len(fn)-len(wp)]
-	//	fmt.Println("file:" + wp)
-	//	mcpemapcore.UpdateMapDownloadCount(fnnp)
+		_, fn := path.Split(r.RequestURI)
+		wp := path.Ext(fn)
+		fnnp := fn[:len(fn)-len(wp)]
+		fmt.Println("file:" + wp)
+		mcpemapcore.UpdateMapDownloadCount(fnnp)
 	h.wrapper.ServeHTTP(rw, r)
 }
 

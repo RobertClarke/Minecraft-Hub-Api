@@ -49,7 +49,7 @@ func init() {
 
 type Map struct {
 	Id             string
-	MapTitle       string `redis:"map_title"`
+	MapTitle       string `redis:"map_title" db:"title"`
 	Description    string `redis:"description"`
 	MapDownloadUri string `redis:"mapdownloaduri"`
 	MapOriginalUri string
@@ -59,7 +59,7 @@ type Map struct {
 	NumViews       int    `redis:"numviews"`
 	Tested         bool   `redis:"tested"`
 	Featured       bool   `redis:"featured"`
-	DownloadCount  int64  `redis:"downloadcount"`
+	DownloadCount  int64  `redis:"downloadcount" db:"downloads"`
 	FavoriteCount  int64  `redis:"favoritecount"`
 
 	MapImageUriList []*MapImage
@@ -137,30 +137,8 @@ func WriteNextMap(object map[string]interface{}, good bool, mapfilehash string) 
 	return err
 }
 
-func UpdateMapDownloadCount(fileHash string) error {
-	var err error
-	var mapId string
-	fmt.Printf("Download Hash:%v\n", fileHash)
-	mapId, err = redis.String(conn.Do("HGET", "mapfilehash:"+fileHash, "id"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if mapId != "" {
-		fmt.Printf("found map id %v for file %v\n", mapId, fileHash)
-		var count int
-		count, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "downloadcount", 1))
-		if err != nil {
-			log.Fatal(err)
-		}
-		_, err = redis.Int(conn.Do("ZADD", "mostdownloaded", count, mapId))
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		fmt.Printf("NOT found map id for file %d", fileHash)
-	}
-	return err
+func UpdateMapDownloadCount(fileHash string) {
+	currentBackend.UpdateMapDownloadCount(fileHash)
 }
 
 func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash string) error {

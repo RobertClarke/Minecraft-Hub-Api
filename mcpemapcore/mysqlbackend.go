@@ -1,7 +1,12 @@
 // mysqlbackend.go
 package mcpemapcore
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+
+	"github.com/jmoiron/sqlx"
+)
 
 type MySqlBackend struct {
 }
@@ -19,4 +24,23 @@ func (r MySqlBackend) LoadUserInfo(userid string) (*User, error) {
 
 	fmt.Printf("userid:%v\n", userid)
 	return MySqlGetUserInfo(userid)
+}
+
+func (r MySqlBackend) UpdateMapDownloadCount(hash string) {
+	var err error
+	db, err := sqlx.Connect("mysql", `clarkezone:winBlue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2?parseTime=true`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tx := db.MustBegin()
+
+	theMap := Map{}
+	err = db.Get(&theMap, "select title, downloads from content_maps where file_hash=?", hash)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db.MustExec("update content_maps set downloads=? where file_hash=?", theMap.DownloadCount+1, hash)
+	tx.Commit()
 }

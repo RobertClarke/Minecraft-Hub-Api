@@ -2,6 +2,7 @@
 package mcpemapcore
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 
@@ -44,4 +45,30 @@ func (r RedisBackend) UpdateMap(user *User,
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func RedisUpdateMapDownloadCount(fileHash string) error {
+	var err error
+	var mapId string
+	fmt.Printf("Download Hash:%v\n", fileHash)
+	mapId, err = redis.String(conn.Do("HGET", "mapfilehash:"+fileHash, "id"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if mapId != "" {
+		fmt.Printf("found map id %v for file %v\n", mapId, fileHash)
+		var count int
+		count, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "downloadcount", 1))
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = redis.Int(conn.Do("ZADD", "mostdownloaded", count, mapId))
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		fmt.Printf("NOT found map id for file %d", fileHash)
+	}
+	return err
 }
