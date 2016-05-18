@@ -81,7 +81,7 @@ func GetMaps(wr http.ResponseWriter, r *http.Request) {
 	case "/getuserfavorites":
 		user := GetUser(wr, r)
 		fmt.Printf("Request: user favorites for user %v\n", user.Id)
-		mapResponse.Maps, err = mcpemapcore.GetFavoriteMaps(user, r.Host)
+		mapResponse.Maps, err = mcpemapcore.GetFavoriteMaps(user, 0, 8, r.Host)
 		break
 	}
 	if hasFailed(wr, err) {

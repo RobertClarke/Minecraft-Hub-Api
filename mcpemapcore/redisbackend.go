@@ -111,3 +111,18 @@ func RedisUpdateFavoriteMap(u *User, mapId string, fav bool) error {
 
 	return nil
 }
+func RedisGetFavoriteMaps(u *User, siteRoot string) ([]*Map, error) {
+
+	values, err := redis.Strings(conn.Do("SMEMBERS", "favorite:"+u.Id))
+	if err != nil {
+		return nil, err
+	}
+	maps := []*Map{}
+	for _, mid := range values {
+		m, err := GetMapFromRedis(mid, siteRoot)
+		if err == nil {
+			maps = append(maps, m)
+		}
+	}
+	return maps, nil
+}

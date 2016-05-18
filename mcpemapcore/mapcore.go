@@ -332,6 +332,11 @@ func GetMostFavoritedMaps(start, count int64, siteRoot string) ([]*Map, int64, e
 	return GetMapsFromRedis(start, count, siteRoot, "mostfavorited", true)
 }
 
+func GetFavoriteMaps(start, count int64, u *User, siteRoot string) ([]*Map, error) {
+	return MySqlGetUserFavoriteMaps(u, int(start), int(count), siteRoot)
+	//return currentBackend.GetFavoriteMaps(u, siteRoot)
+}
+
 func GetMapsFromRedis(start, count int64, siteRoot string, keyName string, reverse bool) ([]*Map, int64, error) {
 	var values []string
 	var err error
@@ -486,20 +491,4 @@ func UpdateFavoriteMap(u *User, mapId string, fav bool) error {
 
 func LoadUserInfo(userId string) (*User, error) {
 	return currentBackend.LoadUserInfo(userId)
-}
-
-func GetFavoriteMaps(u *User, siteRoot string) ([]*Map, error) {
-
-	values, err := redis.Strings(conn.Do("SMEMBERS", "favorite:"+u.Id))
-	if err != nil {
-		return nil, err
-	}
-	maps := []*Map{}
-	for _, mid := range values {
-		m, err := GetMapFromRedis(mid, siteRoot)
-		if err == nil {
-			maps = append(maps, m)
-		}
-	}
-	return maps, nil
 }

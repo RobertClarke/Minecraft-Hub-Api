@@ -45,6 +45,15 @@ func MySqlGetMostDownloadedMaps(start, count int, siteRoot string) ([]*Map, erro
 	return MySqlQueryMaps(sqlQuery, siteRoot, start, count)
 }
 
+func MySqlGetUserFavoriteMaps(user *User, start, count int, siteRoot string) ([]*Map, error) {
+	sqlQuery := "select " + getMapFields() + `
+	from content_maps
+	where valid_direct_uri=1 and id in (select post from favorites where type='map' and user=?
+	order by downloads desc
+	limit ?, ?`
+	return MySqlQueryMaps(sqlQuery, siteRoot, user.Id, start, count)
+}
+
 func MySqlAdminGetBadMaps(start, count int, siteRoot string) ([]*AdminMap, error) {
 	fmt.Printf("getsqlbadmaps\n")
 	sqlQuery := "select " + getAdminMapFields() + `
