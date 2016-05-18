@@ -332,7 +332,7 @@ func GetMostFavoritedMaps(start, count int64, siteRoot string) ([]*Map, int64, e
 	return GetMapsFromRedis(start, count, siteRoot, "mostfavorited", true)
 }
 
-func GetFavoriteMaps(start, count int64, u *User, siteRoot string) ([]*Map, error) {
+func GetFavoriteMaps(u *User, start, count int64, siteRoot string) ([]*Map, error) {
 	return MySqlGetUserFavoriteMaps(u, int(start), int(count), siteRoot)
 	//return currentBackend.GetFavoriteMaps(u, siteRoot)
 }
