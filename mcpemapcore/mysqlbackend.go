@@ -28,14 +28,17 @@ func (r MySqlBackend) LoadUserInfo(userid string) (*User, error) {
 
 func (r MySqlBackend) UpdateFavoriteMap(u *User, mapId string, fav bool) error {
 	var err error
-	db, err := sqlx.Connect("mysql", `clarkezone:winblue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2?parsetime=true`)
+	db, err := sqlx.Connect("mysql", `clarkezone:winBlue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2?parseTime=true`)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	tx := db.MustBegin()
-
-	db.MustExec("insert into favorites user, post, type values(?, ?, 'map')", u.Id, mapId)
+	db.MustExec("delete from favorites where user = ? and post = ? and type='map'", u.Id, mapId)
+	if fav {
+		db.MustExec("insert into favorites (user, post, type) values(?, ?, 'map')", u.Id, mapId)
+	}
+	db.MustExec("update content_maps set favorites = (select count(*) from favorites where post=? and type='map') where id=?", mapId, mapId)
 	err = tx.Commit()
 	if err != nil {
 		log.Fatal(err)
@@ -45,7 +48,7 @@ func (r MySqlBackend) UpdateFavoriteMap(u *User, mapId string, fav bool) error {
 
 func (r MySqlBackend) UpdateMapDownloadCount(hash string) {
 	var err error
-	db, err := sqlx.Connect("mysql", `clarkezone:winblue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2?parsetime=true`)
+	db, err := sqlx.Connect("mysql", `clarkezone:winBlue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2?parseTime=true`)
 	if err != nil {
 		log.Fatal(err)
 	}

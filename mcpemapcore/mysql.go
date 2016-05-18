@@ -187,7 +187,8 @@ func getMapFields() string {
 		"tested",
 		"featured",
 		"downloads",
-		"images"}
+		"images",
+		"favorites"}
 	return strings.Join(fields, ",")
 }
 
@@ -197,7 +198,7 @@ func scanMaps(rows *sql.Rows, siteRoot string) ([]*Map, error) {
 
 	var title, description, dllink, imageList string
 	var mapfilehash []byte
-	var id, tested, downloads, featured int
+	var id, tested, downloads, featured, favorites int
 	for rows.Next() {
 		err = rows.Scan(
 			&id,
@@ -213,7 +214,8 @@ func scanMaps(rows *sql.Rows, siteRoot string) ([]*Map, error) {
 			&featured,
 			&downloads,
 			//favoritecount
-			&imageList)
+			&imageList,
+			&favorites)
 		if err != nil {
 			fmt.Printf("error: %v\n", err.Error())
 			return nil, err
@@ -225,7 +227,7 @@ func scanMaps(rows *sql.Rows, siteRoot string) ([]*Map, error) {
 			MapDownloadUri: dllink,
 			MapFileHash:    string(mapfilehash),
 			DownloadCount:  int64(downloads),
-		}
+			FavoriteCount:  int64(favorites)}
 
 		if newMap.MapFileHash != "" {
 			newMap.MapDownloadUri = fmt.Sprintf("%v/maps/%v.zip", siteRoot, string(mapfilehash))

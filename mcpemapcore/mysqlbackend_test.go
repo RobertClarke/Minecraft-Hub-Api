@@ -8,10 +8,9 @@ func TestUploadMapDownloadCount(t *testing.T) {
 }
 
 func TestUpdateFavoriteMap(t *testing.T) {
-	var u *User
-
+	u := &User{}
 	var mapId string
-	mapId = "234"
+	mapId = "3"
 	u.Id = "123"
 
 	sql := MySqlBackend{}
