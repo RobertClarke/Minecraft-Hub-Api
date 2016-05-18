@@ -481,43 +481,7 @@ func DownloadContentRedirectSearch(uri string, dir string, acceptMime string, ex
 }
 
 func UpdateFavoriteMap(u *User, mapId string, fav bool) error {
-
-	var err error
-	var existingCount int
-	//add mapid to favorite set for user
-	if fav {
-		_, err = redis.Int(conn.Do("SADD", "favorite:"+u.Id, mapId))
-		if err != nil {
-			return err
-		}
-
-		//incrememnt favorite count on map:w
-		existingCount, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "favoritecount", 1))
-		if err != nil {
-			log.Fatal(err)
-		}
-		_, err = redis.Int(conn.Do("ZADD", "mostfavorited", existingCount, mapId))
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		_, err = redis.Int(conn.Do("SPOP", "favorite:"+u.Id))
-		if err != nil {
-			return err
-		}
-
-		//decrement favorite count on map:w
-		existingCount, err = redis.Int(conn.Do("HINCRBY", "map:"+mapId, "favoritecount", -1))
-		if err != nil {
-			log.Fatal(err)
-		}
-		_, err = redis.Int(conn.Do("ZADD", "mostfavorited", existingCount, mapId))
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	return nil
+	return currentBackend.UpdateFavoriteMap(u, mapId, fav)
 }
 
 func LoadUserInfo(userId string) (*User, error) {
