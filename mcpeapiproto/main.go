@@ -17,7 +17,7 @@ import (
 	"github.com/robertclarke/Minecraft-Hub-Api/mysqlauthprovider"
 	"github.com/robertclarke/Minecraft-Hub-Api/redisauthprovider"
 
-	"github.com/clarkezone/jwtauth"
+	"github.com/clarkezone/jwtauth-go"
 )
 
 type MapListResponse struct {

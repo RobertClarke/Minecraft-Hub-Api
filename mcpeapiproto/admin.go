@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/clarkezone/jwtauth"
+	"github.com/clarkezone/jwtauth-go"
 )
 
 type AdminMapListResponse struct {
