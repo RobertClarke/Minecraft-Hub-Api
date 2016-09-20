@@ -18,6 +18,8 @@ import (
 	"github.com/robertclarke/Minecraft-Hub-Api/redisauthprovider"
 
 	"github.com/clarkezone/jwtauth-go"
+	"github.com/dkumor/acmewrapper"
+	"net"
 )
 
 type MapListResponse struct {
@@ -227,6 +229,33 @@ func GenUUID() (string, error) {
 
 }
 
+func configureTLS(hostname string) (net.Listener, *tls.Config) {
+	w, err := acmewrapper.New(acmewrapper.Config{
+		Domains: []string{hostname},
+		Address: ":8080",
+
+		TLSCertFile: hostname + ".crt",
+		TLSKeyFile:  hostname + ".key",
+
+		RegistrationFile: "user.reg",
+		PrivateKeyFile:   "user.pem",
+
+		TOSCallback: acmewrapper.TOSAgree,
+	})
+
+	if err != nil {
+		log.Fatal("acmewrapper: ", err)
+	}
+
+	tlsconfig := w.TLSConfig()
+
+	listener, err := tls.Listen("tcp", ":8080", tlsconfig)
+	if err != nil {
+		log.Fatal("Listener: ", err)
+	}
+	return listener, tlsconfig
+}
+
 func main() {
 	useSsl := flag.Bool("ssl", false, "enable SSL")
 	flag.Parse()
@@ -252,6 +281,7 @@ func main() {
 	http.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))
 	http.Handle("/mapimages/", http.FileServer(http.Dir(".")))
 	if *useSsl {
+
 		fmt.Printf("Listening for TLS on 80\n")
 		//panic(http.ListenAndServeTLS(":80", "dev.objectivepixel.com.crt", "dev.objectivepixel.com.key", nil))
 		panic(http.ListenAndServeTLS(":443", "dev2.minecrafthub.com.crt", "dev2.minecrafthub.com.key", nil))
