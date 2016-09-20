@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -12,14 +13,16 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 
 	"github.com/robertclarke/Minecraft-Hub-Api/mcpemapcore"
 	"github.com/robertclarke/Minecraft-Hub-Api/mysqlauthprovider"
 	"github.com/robertclarke/Minecraft-Hub-Api/redisauthprovider"
 
+	"net"
+
 	"github.com/clarkezone/jwtauth-go"
 	"github.com/dkumor/acmewrapper"
-	"net"
 )
 
 type MapListResponse struct {
@@ -232,7 +235,7 @@ func GenUUID() (string, error) {
 func configureTLS(hostname string) (net.Listener, *tls.Config) {
 	w, err := acmewrapper.New(acmewrapper.Config{
 		Domains: []string{hostname},
-		Address: ":8080",
+		Address: ":443",
 
 		TLSCertFile: hostname + ".crt",
 		TLSKeyFile:  hostname + ".key",
@@ -249,7 +252,7 @@ func configureTLS(hostname string) (net.Listener, *tls.Config) {
 
 	tlsconfig := w.TLSConfig()
 
-	listener, err := tls.Listen("tcp", ":8080", tlsconfig)
+	listener, err := tls.Listen("tcp", ":443", tlsconfig)
 	if err != nil {
 		log.Fatal("Listener: ", err)
 	}
@@ -257,6 +260,7 @@ func configureTLS(hostname string) (net.Listener, *tls.Config) {
 }
 
 func main() {
+	var err error
 	useSsl := flag.Bool("ssl", false, "enable SSL")
 	flag.Parse()
 	//var provider = redisauth.RedisUserProvider{}
@@ -265,28 +269,37 @@ func main() {
 	auth.RegisterLoginHandlers()
 	redisauth.RegisterUserRegistrationHandler()
 
-	http.HandleFunc("/hello", auth.CorsOptions(HelloServer))
-	http.HandleFunc("/getmaplist", auth.CorsOptions(GetMaps))
-	http.HandleFunc("/getfeaturedmaplist", auth.CorsOptions(GetMaps))
-	http.HandleFunc("/getmostdownloaded", auth.CorsOptions(GetMaps))
-	http.HandleFunc("/getmostfavorited", auth.CorsOptions(GetMaps))
-	http.HandleFunc("/setfavoritemap", auth.CorsOptions(auth.RequireTokenAuthentication(UpdateFavoriteMap)))
-	http.HandleFunc("/getuserfavorites", auth.CorsOptions(auth.RequireTokenAuthentication(GetMaps)))
-	http.HandleFunc("/admin/getbadmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetBadMapList)))
-	http.HandleFunc("/admin/geteditedmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetEditedMapList)))
-	http.HandleFunc("/admin/updatemapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(AdminUpdateMapFromUpload)))
-	http.HandleFunc("/upload", auth.CorsOptions(auth.RequireTokenAuthentication(Upload)))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/hello", auth.CorsOptions(HelloServer))
+	mux.HandleFunc("/getmaplist", auth.CorsOptions(GetMaps))
+	mux.HandleFunc("/getfeaturedmaplist", auth.CorsOptions(GetMaps))
+	mux.HandleFunc("/getmostdownloaded", auth.CorsOptions(GetMaps))
+	mux.HandleFunc("/getmostfavorited", auth.CorsOptions(GetMaps))
+	mux.HandleFunc("/setfavoritemap", auth.CorsOptions(auth.RequireTokenAuthentication(UpdateFavoriteMap)))
+	mux.HandleFunc("/getuserfavorites", auth.CorsOptions(auth.RequireTokenAuthentication(GetMaps)))
+	mux.HandleFunc("/admin/getbadmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetBadMapList)))
+	mux.HandleFunc("/admin/geteditedmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetEditedMapList)))
+	mux.HandleFunc("/admin/updatemapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(AdminUpdateMapFromUpload)))
+	mux.HandleFunc("/upload", auth.CorsOptions(auth.RequireTokenAuthentication(Upload)))
 	// use http.stripprefix to redirect
 	//http.Handle("/maps/", http.FileServer(http.Dir(".")))
-	http.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))
-	http.Handle("/mapimages/", http.FileServer(http.Dir(".")))
+	mux.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))
+	mux.Handle("/mapimages/", http.FileServer(http.Dir(".")))
+	var server *http.Server
 	if *useSsl {
-
-		fmt.Printf("Listening for TLS on 80\n")
-		//panic(http.ListenAndServeTLS(":80", "dev.objectivepixel.com.crt", "dev.objectivepixel.com.key", nil))
-		panic(http.ListenAndServeTLS(":443", "dev2.minecrafthub.com.crt", "dev2.minecrafthub.com.key", nil))
+		listener, tlsconfig := configureTLS("dev2.minecrafthub.com")
+		//fmt.Printf("Listening for TLS with cert for hostname %v port %v\n", config.Hostname, config.Port)
+		server = &http.Server{
+			Addr:      ":" + strconv.Itoa(443),
+			Handler:   mux,
+			TLSConfig: tlsconfig,
+		}
+		err = server.Serve(listener)
+		if err != nil {
+			log.Fatal(err)
+		}
 	} else {
-		fmt.Printf("Listening for HTTP on 80\n")
-		panic(http.ListenAndServe(":80", nil))
+		// fmt.Printf("Listening for HTTP on 80\n")
+		// panic(http.ListenAndServe(":80", nil))
 	}
 }
