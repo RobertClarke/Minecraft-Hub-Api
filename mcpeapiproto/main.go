@@ -266,10 +266,10 @@ func main() {
 	//var provider = redisauth.RedisUserProvider{}
 	var provider = mysqlauth.MysqlAuthProvider{}
 	auth := jwtauth.CreateApiSecurity(provider)
-	auth.RegisterLoginHandlers()
-	redisauth.RegisterUserRegistrationHandler()
 
 	mux := http.NewServeMux()
+	auth.RegisterLoginHandlerMux(mux)
+	//mysqlauth.RegisterUserRegistrationHandler(mux) <-- user registration needs hooking up to the real db
 	mux.HandleFunc("/hello", auth.CorsOptions(HelloServer))
 	mux.HandleFunc("/getmaplist", auth.CorsOptions(GetMaps))
 	mux.HandleFunc("/getfeaturedmaplist", auth.CorsOptions(GetMaps))
@@ -300,7 +300,7 @@ func main() {
 		}
 	} else {
 		fmt.Printf("Listening for HTTP on 80\n")
-		err = http.ListenAndServe(":80", mux)
+		err = http.ListenAndServe(":8080", mux)
 		if err != nil {
 			log.Fatal(err)
 		}

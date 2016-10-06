@@ -27,8 +27,8 @@ func hasFailed(wr http.ResponseWriter, err error) bool {
 	return false
 }
 
-func RegisterUserRegistrationHandler() {
-	http.HandleFunc("/register", registerUser)
+func RegisterUserRegistrationHandler(mux *http.ServeMux) {
+	mux.HandleFunc("/register", registerUser)
 }
 
 func (a RedisUserProvider) login(username string, password string) (result bool, userid string) {
