@@ -17,7 +17,6 @@ import (
 
 	"github.com/robertclarke/Minecraft-Hub-Api/mcpemapcore"
 	"github.com/robertclarke/Minecraft-Hub-Api/mysqlauthprovider"
-	"github.com/robertclarke/Minecraft-Hub-Api/redisauthprovider"
 
 	"net"
 
