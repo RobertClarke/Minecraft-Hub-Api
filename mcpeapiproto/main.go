@@ -28,6 +28,17 @@ type MapListResponse struct {
 	Maps []*mcpemapcore.Map
 }
 
+func SecureHello(wr http.ResponseWriter, r *http.Request) {
+	fmt.Printf("UpdateFaveMap\n")
+
+	userid := r.Header.Get("userid")
+	_, err := mcpemapcore.LoadUserInfo(userid)
+	if hasFailed(wr, err) {
+		return
+	}
+	fmt.Fprintf(wr, "secure hello, world!\n")
+}
+
 func UpdateFavoriteMap(wr http.ResponseWriter, r *http.Request) {
 	fmt.Printf("UpdateFaveMap\n")
 	userid := r.Header.Get("userid")
@@ -274,6 +285,7 @@ func main() {
 	mux.HandleFunc("/getfeaturedmaplist", auth.CorsOptions(GetMaps))
 	mux.HandleFunc("/getmostdownloaded", auth.CorsOptions(GetMaps))
 	mux.HandleFunc("/getmostfavorited", auth.CorsOptions(GetMaps))
+	mux.HandleFunc("/securehello", auth.CorsOptions(auth.RequireTokenAuthentication(SecureHello)))
 	mux.HandleFunc("/setfavoritemap", auth.CorsOptions(auth.RequireTokenAuthentication(UpdateFavoriteMap)))
 	mux.HandleFunc("/getuserfavorites", auth.CorsOptions(auth.RequireTokenAuthentication(GetMaps)))
 	mux.HandleFunc("/admin/getbadmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetBadMapList)))
@@ -299,7 +311,7 @@ func main() {
 		}
 	} else {
 		fmt.Printf("Listening for HTTP on 80\n")
-		err = http.ListenAndServe(":8080", mux)
+		err = http.ListenAndServe(":80", mux)
 		if err != nil {
 			log.Fatal(err)
 		}
