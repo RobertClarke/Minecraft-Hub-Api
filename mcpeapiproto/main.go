@@ -222,6 +222,43 @@ func Upload(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func CreateFromUpload(wr http.ResponseWriter, r *http.Request) {
+	user := GetUser(wr, r)
+	if user == nil {
+		fmt.Printf("shit user is nil after get user\n")
+	}
+	type UpdateMapParams struct {
+		MapId      int    `json:"mapId"`
+		UploadHash string `json:"uploadHash"`
+	}
+
+	var parsedParams UpdateMapParams
+
+	bytes, err := ioutil.ReadAll(r.Body)
+	if hasFailed(wr, err) {
+		fmt.Printf("Failed to read bytes" + err.Error())
+		return
+	}
+
+	err = json.Unmarshal(bytes, &parsedParams)
+
+	if hasFailed(wr, err) {
+		fmt.Printf("Failed to unmarshall" + err.Error())
+		return
+	}
+
+	fmt.Printf("Unmarshalled %+v\n", parsedParams)
+
+	fmt.Printf("update map %v id with filehash %v\n", parsedParams.MapId, parsedParams.UploadHash)
+
+	//err = mcpemapcore.AdminUpdateMap(user, parsedParams.MapId, parsedParams.UploadHash)
+
+	if hasFailed(wr, err) {
+		fmt.Printf("Failed to unmarshall%v\n", err.Error())
+		return
+	}
+}
+
 func GenUUID() (string, error) {
 
 	uuid := make([]byte, 16)
@@ -292,6 +329,7 @@ func main() {
 	mux.HandleFunc("/admin/geteditedmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetEditedMapList)))
 	mux.HandleFunc("/admin/updatemapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(AdminUpdateMapFromUpload)))
 	mux.HandleFunc("/upload", auth.CorsOptions(auth.RequireTokenAuthentication(Upload)))
+	mux.HandleFunc("/createmapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(CreateFromUpload)))
 	// use http.stripprefix to redirect
 	//http.Handle("/maps/", http.FileServer(http.Dir(".")))
 	mux.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))
@@ -310,8 +348,8 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		fmt.Printf("Listening for HTTP on 80\n")
-		err = http.ListenAndServe(":80", mux)
+		fmt.Printf("Listening for HTTP on 8080\n")
+		err = http.ListenAndServe(":8080", mux)
 		if err != nil {
 			log.Fatal(err)
 		}
