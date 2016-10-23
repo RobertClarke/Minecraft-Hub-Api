@@ -16,7 +16,7 @@ import (
 	"strconv"
 
 	"github.com/robertclarke/Minecraft-Hub-Api/mcpemapcore"
-	"github.com/robertclarke/Minecraft-Hub-Api/mysqlauthprovider"
+	redisauth "github.com/robertclarke/Minecraft-Hub-Api/redisauthprovider"
 
 	"net"
 
@@ -299,13 +299,15 @@ func main() {
 	var err error
 	useSsl := flag.Bool("ssl", false, "enable SSL")
 	flag.Parse()
-	//var provider = redisauth.RedisUserProvider{}
-	var provider = mysqlauth.MysqlAuthProvider{}
+	var provider = redisauth.RedisUserProvider{}
+	//var provider = mysqlauth.MysqlAuthProvider{}
 	auth := jwtauth.CreateApiSecurity(provider)
 
 	mux := http.NewServeMux()
 	auth.RegisterLoginHandlerMux(mux)
 	//mysqlauth.RegisterUserRegistrationHandler(mux) <-- user registration needs hooking up to the real db
+	redisauth.RegisterUserRegistrationHandler(mux)
+
 	mux.HandleFunc("/hello", auth.CorsOptions(HelloServer))
 	mux.HandleFunc("/getmaplist", auth.CorsOptions(GetMaps))
 	mux.HandleFunc("/getfeaturedmaplist", auth.CorsOptions(GetMaps))

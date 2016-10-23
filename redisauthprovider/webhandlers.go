@@ -43,6 +43,7 @@ func (a RedisUserProvider) login(username string, password string) (result bool,
 }
 
 func registerUser(wr http.ResponseWriter, r *http.Request) {
+	logger.SetPrefix("registerUser")
 	wr.Header().Set("Access-Control-Allow-Origin", "*")
 	type RegisterUser struct {
 		Username string
@@ -52,6 +53,7 @@ func registerUser(wr http.ResponseWriter, r *http.Request) {
 	var b RegisterUser
 
 	bodyBytes, err := ioutil.ReadAll(r.Body)
+	logger.Printf("%s\n", bodyBytes)
 
 	if hasFailed(wr, err) {
 		return
@@ -60,6 +62,7 @@ func registerUser(wr http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bodyBytes, &b)
 
 	if hasFailed(wr, err) {
+		logger.Printf("Error unmarshal")
 		return
 	}
 
@@ -69,6 +72,7 @@ func registerUser(wr http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = register(b.Username, b.Password)
+	logger.Println("user successfully created")
 
 	if hasFailed(wr, err) {
 		fmt.Printf("Error:" + err.Error())

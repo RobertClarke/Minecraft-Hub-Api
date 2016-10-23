@@ -5,10 +5,12 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"log"
+	"os"
 	"strconv"
 	"time"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 func main() {
@@ -19,7 +21,8 @@ func init() {
 }
 
 var (
-	key = []byte("h27d72ts7hiasehi711334")
+	key    = []byte("h27d72ts7hiasehi711334")
+	logger = log.New(os.Stdout, "TRACE:", log.Ldate|log.Ltime|log.Lshortfile)
 )
 
 func register(username, password string) (auth string, err error) {
@@ -44,8 +47,10 @@ func register(username, password string) (auth string, err error) {
 }
 
 func login(username, password string) (err error, userid string) {
+	logger.Printf("redisloginprovider:login")
 	userId, err := redis.Int(conn.Do("HGET", "users", username))
 	if err != nil {
+		logger.Printf("Error from redis: %v", err)
 		return errors.New("Wrong username or password"), ""
 	}
 	realPassword, err := redis.String(conn.Do("HGET", fmt.Sprintf("user:%d", userId), "password"))
