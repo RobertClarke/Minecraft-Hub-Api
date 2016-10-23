@@ -16,6 +16,30 @@ func (r MySqlBackend) CreateMap(user *User,
 
 }
 
+func (r MySqlBackend) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	maps, err := MySqlGetAllMaps(int(start), int(count), siteRoot)
+	return maps, -1, err
+}
+
+func (r MySqlBackend) GetFeaturedMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	maps, err := MySqlGetFeaturedMaps(int(start), int(count), siteRoot)
+	return maps, -1, err
+}
+
+func (r MySqlBackend) GetMostDownloadedMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	maps, err := MySqlGetMostDownloadedMaps(int(start), int(count), siteRoot)
+	return maps, -1, err
+}
+
+func (r MySqlBackend) GetMostFavoritedMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	panic("Not implemented")
+}
+
+func (r MySqlBackend) GetFavoriteMaps(u *User, start, count int64, siteRoot string) ([]*Map, int64, error) {
+	maps, err := MySqlGetUserFavoriteMaps(u, int(start), int(count), siteRoot)
+	return maps, -1, err
+}
+
 func (r MySqlBackend) UpdateMap(user *User,
 	mapid int,
 	uploadFilename string,
