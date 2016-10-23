@@ -44,7 +44,7 @@ func TestCreateMap(t *testing.T) {
 	for i := range newMap.MapImageFileNames {
 		name := newMap.MapImageFileNames[i]
 		logger.Printf("Copying %v", name)
-		source := path.Join(testDir, "")
+		source := path.Join(testDir, name)
 		dest := path.Join(downloadDir, name)
 		err := copyFile(source, dest)
 		if err != nil {
