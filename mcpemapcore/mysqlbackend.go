@@ -11,6 +11,11 @@ import (
 type MySqlBackend struct {
 }
 
+func (r MySqlBackend) CreateMap(user *User,
+	newMap *NewMap) {
+
+}
+
 func (r MySqlBackend) UpdateMap(user *User,
 	mapid int,
 	uploadFilename string,
@@ -62,5 +67,17 @@ func (r MySqlBackend) UpdateMapDownloadCount(hash string) {
 	}
 
 	db.MustExec("update content_maps set downloads=? where file_hash=?", themap.DownloadCount+1, hash)
+	tx.Commit()
+}
+
+func (r MySqlBackend) createMap(hash string) {
+	var err error
+	db, err := sqlx.Connect("mysql", `clarkezone:winBlue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2?parseTime=true`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tx := db.MustBegin()
+	panic("not implemented")
 	tx.Commit()
 }

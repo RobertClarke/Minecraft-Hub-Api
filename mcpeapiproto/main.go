@@ -227,29 +227,18 @@ func CreateFromUpload(wr http.ResponseWriter, r *http.Request) {
 	if user == nil {
 		fmt.Printf("shit user is nil after get user\n")
 	}
-	type UpdateMapParams struct {
-		MapId      int    `json:"mapId"`
-		UploadHash string `json:"uploadHash"`
-	}
 
-	var parsedParams UpdateMapParams
+	var parsedParams mcpemapcore.NewMap
 
-	bytes, err := ioutil.ReadAll(r.Body)
-	if hasFailed(wr, err) {
-		fmt.Printf("Failed to read bytes" + err.Error())
-		return
-	}
-
-	err = json.Unmarshal(bytes, &parsedParams)
+	err := json.NewDecoder(r.Body).Decode(&parsedParams)
 
 	if hasFailed(wr, err) {
 		fmt.Printf("Failed to unmarshall" + err.Error())
 		return
 	}
 
-	fmt.Printf("Unmarshalled %+v\n", parsedParams)
-
-	fmt.Printf("update map %v id with filehash %v\n", parsedParams.MapId, parsedParams.UploadHash)
+	createMapService := mcpemapcore.NewCreateMapService()
+	createMapService.CreateMap(user, &parsedParams)
 
 	//err = mcpemapcore.AdminUpdateMap(user, parsedParams.MapId, parsedParams.UploadHash)
 
