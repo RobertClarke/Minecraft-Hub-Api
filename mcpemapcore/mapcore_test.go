@@ -25,10 +25,10 @@ func TestMySqlGetAllMaps(t *testing.T) {
 
 func TestCreateMap(t *testing.T) {
 	logger := log.New(os.Stdout, "TRACE:", log.Ldate|log.Ltime|log.Lshortfile)
-	//tb := testBackend{}
-	//	mapservice := NewCreateMapServiceWithBackend(tb, logger)
+	tb := testBackend{}
+	mapservice := NewCreateMapServiceWithBackend(tb, logger)
 
-	//	u := User{}
+	u := User{}
 	newMap := NewMap{
 		Title:             "The test map",
 		Description:       "Describing the map",
@@ -52,7 +52,7 @@ func TestCreateMap(t *testing.T) {
 		}
 	}
 
-	//mapservice.CreateMap(&u, &newMap)
+	mapservice.CreateMap(&u, &newMap)
 
 	//Cleanup
 }

@@ -70,7 +70,7 @@ func (r MySqlBackend) UpdateMapDownloadCount(hash string) {
 	tx.Commit()
 }
 
-func (r MySqlBackend) createMap(hash string) {
+func (r MySqlBackend) createMap(u *User) {
 	var err error
 	db, err := sqlx.Connect("mysql", `clarkezone:winBlue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2?parseTime=true`)
 	if err != nil {
@@ -78,6 +78,6 @@ func (r MySqlBackend) createMap(hash string) {
 	}
 
 	tx := db.MustBegin()
-	panic("not implemented")
+	db.MustExec("insert into maps (title, description) values(?, ?, 'map')", u.Id)
 	tx.Commit()
 }
