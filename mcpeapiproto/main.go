@@ -298,7 +298,11 @@ func configureTLS(hostname string) (net.Listener, *tls.Config) {
 func main() {
 	var err error
 	useSsl := flag.Bool("ssl", false, "enable SSL")
+	help := flag.Bool("?", false, "get help")
 	flag.Parse()
+	if *help {
+		flag.Usage()
+	}
 	var provider = redisauth.RedisUserProvider{}
 	//var provider = mysqlauth.MysqlAuthProvider{}
 	auth := jwtauth.CreateApiSecurity(provider)
