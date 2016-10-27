@@ -15,6 +15,8 @@ type RedisBackend struct {
 
 func (r RedisBackend) CreateMap(user *User,
 	newMap *NewMap) {
+	theNewMap := Map{}
+	writeMapFromMap(&theNewMap)
 
 }
 
@@ -187,6 +189,10 @@ func WriteNextMap(object map[string]interface{}, good bool, mapfilehash string) 
 	err = writeMap(postId, object, good, mapfilehash)
 
 	return err
+}
+
+func writeMapFromMap(m *Map) {
+
 }
 
 func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash string) error {
