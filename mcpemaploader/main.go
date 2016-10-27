@@ -18,15 +18,14 @@ func main() {
 	flag.Parse()
 	if *showstats {
 		dumpStats()
-	}
-	if *doimport {
+	} else if *doimport {
 		GetWriteMapsFromService()
-	}
-	if *doMySqlimport {
+	} else if *doMySqlimport {
 		GetWriteMapsFromMySqlService()
-	}
-	if *makeAdmin != "" {
+	} else if *makeAdmin != "" {
 		makeUserAdmin(*makeAdmin)
+	} else {
+		flag.Usage()
 	}
 	//	m, _ := mcpemapcore.GetMapFromRedis("2")
 	//	maps, remaining, _ := mcpemapcore.GetMapsFromRedis(0, 4)
