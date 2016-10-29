@@ -2,7 +2,6 @@ package mcpemapcore
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path"
@@ -24,6 +23,7 @@ func TestMySqlGetAllMaps(t *testing.T) {
 }
 
 func TestCreateMap(t *testing.T) {
+	conn.Do("flushdb")
 	logger := log.New(os.Stdout, "TRACE:", log.Ldate|log.Ltime|log.Lshortfile)
 	tb := CreateRedisBackendWithDatabase(1)
 	mapservice := NewCreateMapServiceWithBackend(tb, logger)
@@ -31,7 +31,7 @@ func TestCreateMap(t *testing.T) {
 	newMap := NewMap{
 		Title:             "The test map",
 		Description:       "Describing the map",
-		MapFilename:       "filename",
+		MapFilename:       "m4sBABVgAAA=.zip",
 		MapImageFileNames: []string{"image1.png", "image2.png"},
 	}
 
@@ -51,9 +51,23 @@ func TestCreateMap(t *testing.T) {
 		}
 	}
 
-	mapservice.CreateMap(&u, &newMap)
-	savedMap, err := GetMapFromRedis("1", "")
+	copyFile(path.Join(testDir, "m4sBABVgAAA=.zip"), path.Join(downloadDir, "m4sBABVgAAA=.zip"))
+
+	_, err := mapservice.CreateMap(&u, &newMap)
 	if err != nil {
+		log.Fatal("createmap failed")
+		t.Fail()
+	}
+
+	var savedMap *Map
+	savedMap, err = GetMapFromRedis("1", "")
+	if savedMap == nil {
+
+		log.Fatal("no map")
+		t.Fail()
+	}
+	if err != nil {
+		log.Fatal("get map failed")
 		t.Fail()
 	}
 
@@ -74,21 +88,5 @@ func TestCreateMap(t *testing.T) {
 
 	//TODO: verify the data in redis
 
-	conn.Do("flushall")
-}
-
-func copyFile(source, destination string) error {
-	var err error
-	file, err := os.Open(source)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	output, err := os.Create(destination)
-	defer output.Close()
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(output, file)
-	return err
+	conn.Do("flushdb")
 }

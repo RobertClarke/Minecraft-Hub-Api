@@ -2,8 +2,11 @@
 package mcpemapcore
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"os"
+	"path"
 	"strconv"
 	"time"
 
@@ -44,16 +47,35 @@ func CreateRedisBackend() *RedisBackend {
 }
 
 func (r RedisBackend) CreateMap(user *User,
-	newMap *NewMap) {
+	newMap *NewMap) (string, error) {
+
+	dir, _ := os.Getwd()
+	downloadDir := path.Join(dir, "downloads")
+	mapDir := path.Join(dir, "maps")
+	filePath := path.Join(downloadDir, newMap.MapFilename)
+	_, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		log.Printf("FAILED Create map: file %v", newMap.MapFilename)
+		return "", errors.New("map doesn't exist")
+	} else {
+		log.Printf("Create map: file %v exists", newMap.MapFilename)
+	}
+	//TODO: verify map
+	//TODO: verify all images
+
+	err = copyFile(filePath, path.Join(mapDir, "m4sBABVgAAA=.zip"))
+	if err != nil {
+		return "", errors.New("copy failed")
+	}
+
 	theNewMap := Map{
 		MapTitle:    newMap.Title,
 		Description: newMap.Description,
 		MapFileHash: newMap.MapFilename,
 	}
 
-	//TODO: verify and move files including images
-
 	writeMapFromMap(&theNewMap)
+	return "", nil
 }
 
 func (r RedisBackend) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {

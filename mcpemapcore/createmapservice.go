@@ -76,7 +76,7 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 	// move all images
 
 	// add to database
-	s.myBackend.CreateMap(user, newMap)
+	return s.myBackend.CreateMap(user, newMap)
 
 	// return id
 	return "", nil
