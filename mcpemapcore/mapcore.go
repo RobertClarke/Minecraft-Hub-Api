@@ -8,16 +8,9 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-
-	"github.com/garyburd/redigo/redis"
-)
-
-const (
-	address = "127.0.0.1:6379"
 )
 
 var (
-	conn        redis.Conn
 	rolesByName map[string]*Role
 	rolesById   map[int]*Role
 	//currentBackend *MySqlBackend
@@ -27,7 +20,8 @@ var (
 func init() {
 
 	//currentBackend = &MySqlBackend{}
-	currentBackend = &RedisBackend{}
+	//currentBackend = &RedisBackend{}
+	currentBackend = CreateRedisBackend()
 
 	fmt.Println("mcpemapcoreinit")
 
@@ -82,20 +76,14 @@ type Stats struct {
 }
 
 func init() {
-	var err error
-	conn, err = redis.Dial("tcp", address)
-	if nil != err {
-		log.Fatalln("Error: Connection to redis:", err)
-	}
-	fmt.Printf("redis is alive\n")
 	if !Exists("maps") {
-		err = os.Mkdir("maps", 0777)
+		err := os.Mkdir("maps", 0777)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 	if !Exists("mapimages") {
-		err = os.Mkdir("mapimages", 0777)
+		err := os.Mkdir("mapimages", 0777)
 		if err != nil {
 			log.Fatal(err)
 		}

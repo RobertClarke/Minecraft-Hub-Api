@@ -72,7 +72,6 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 	}
 
 	// move map zip file
-	// add map to redis
 
 	// move all images
 

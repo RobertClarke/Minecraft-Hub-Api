@@ -10,7 +10,37 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
+const (
+	address = "127.0.0.1:6379"
+)
+
+var (
+	conn redis.Conn
+)
+
+func init() {
+}
+
 type RedisBackend struct {
+	currentDatabase int
+}
+
+func CreateRedisBackendWithDatabase(db int) *RedisBackend {
+	redisInstance := RedisBackend{}
+	redisInstance.currentDatabase = db
+
+	var err error
+	conn, err = redis.Dial("tcp", address, redis.DialDatabase(redisInstance.currentDatabase))
+	if nil != err {
+		log.Fatalln("Error: Connection to redis:", err)
+	}
+	fmt.Printf("redis is alive\n")
+
+	return &redisInstance
+}
+
+func CreateRedisBackend() *RedisBackend {
+	return CreateRedisBackendWithDatabase(0)
 }
 
 func (r RedisBackend) CreateMap(user *User,
@@ -191,8 +221,38 @@ func WriteNextMap(object map[string]interface{}, good bool, mapfilehash string) 
 	return err
 }
 
-func writeMapFromMap(m *Map) {
+func writeMapFromMap(m *Map) error {
 
+	//verify mapfilehash is not null
+	//verify downloaduri
+
+	postId, err := redis.Int(conn.Do("INCR", "next_map_id"))
+	if err != nil {
+		return err
+	}
+	_, err = conn.Do("HMSET",
+		fmt.Sprintf("map:%d", postId),
+		"map_title", m.MapTitle,
+		"description", m.Description,
+		"author", m.Author,
+		"author_uri", m.AuthorUri,
+		"mapdownloaduri", m.MapDownloadUri,
+		"mapfilehash", m.MapFileHash,
+		"numviews", 0,
+		"tested", 1,
+		"featured", 1,
+		"time", time.Now().Unix())
+
+	if err != nil {
+		return err
+	}
+	_, err = conn.Do("HMSET",
+		"mapfilehash:"+m.MapFileHash,
+		"id", fmt.Sprintf("%d", postId))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash string) error {

@@ -25,9 +25,8 @@ func TestMySqlGetAllMaps(t *testing.T) {
 
 func TestCreateMap(t *testing.T) {
 	logger := log.New(os.Stdout, "TRACE:", log.Ldate|log.Ltime|log.Lshortfile)
-	tb := testBackend{}
+	tb := CreateRedisBackendWithDatabase(1)
 	mapservice := NewCreateMapServiceWithBackend(tb, logger)
-
 	u := User{}
 	newMap := NewMap{
 		Title:             "The test map",
@@ -43,9 +42,9 @@ func TestCreateMap(t *testing.T) {
 
 	for i := range newMap.MapImageFileNames {
 		name := newMap.MapImageFileNames[i]
-		logger.Printf("Copying %v", name)
 		source := path.Join(testDir, name)
 		dest := path.Join(downloadDir, name)
+		logger.Printf("Copying %v from %v to %v", name, source, dest)
 		err := copyFile(source, dest)
 		if err != nil {
 			log.Panic(err)
@@ -53,7 +52,7 @@ func TestCreateMap(t *testing.T) {
 	}
 
 	mapservice.CreateMap(&u, &newMap)
-
+	//TODO: verify the data in redis
 	//Cleanup
 }
 
@@ -71,11 +70,4 @@ func copyFile(source, destination string) error {
 	}
 	_, err = io.Copy(output, file)
 	return err
-}
-
-type testBackend struct {
-}
-
-func (t testBackend) CreateMap(user *User,
-	newMap *NewMap) {
 }
