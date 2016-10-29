@@ -45,9 +45,15 @@ func CreateRedisBackend() *RedisBackend {
 
 func (r RedisBackend) CreateMap(user *User,
 	newMap *NewMap) {
-	theNewMap := Map{}
-	writeMapFromMap(&theNewMap)
+	theNewMap := Map{
+		MapTitle:    newMap.Title,
+		Description: newMap.Description,
+		MapFileHash: newMap.MapFilename,
+	}
 
+	//TODO: verify and move files including images
+
+	writeMapFromMap(&theNewMap)
 }
 
 func (r RedisBackend) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
@@ -224,7 +230,7 @@ func WriteNextMap(object map[string]interface{}, good bool, mapfilehash string) 
 func writeMapFromMap(m *Map) error {
 
 	//verify mapfilehash is not null
-	//verify downloaduri
+	//verify downloaduri is not null
 
 	postId, err := redis.Int(conn.Do("INCR", "next_map_id"))
 	if err != nil {

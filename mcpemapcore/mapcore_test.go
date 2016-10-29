@@ -38,7 +38,7 @@ func TestCreateMap(t *testing.T) {
 	dir, _ := os.Getwd()
 	testDir := path.Join(dir, "testdata")
 	downloadDir := path.Join(dir, "downloads")
-	os.Mkdir(downloadDir, 0666)
+	os.Mkdir(downloadDir, 0777)
 
 	for i := range newMap.MapImageFileNames {
 		name := newMap.MapImageFileNames[i]
@@ -52,8 +52,29 @@ func TestCreateMap(t *testing.T) {
 	}
 
 	mapservice.CreateMap(&u, &newMap)
+	savedMap, err := GetMapFromRedis("1", "")
+	if err != nil {
+		t.Fail()
+	}
+
+	if newMap.Title != savedMap.MapTitle {
+		log.Fatal("title doesn't match")
+		t.Fail()
+	}
+
+	if newMap.Description != savedMap.Description {
+		log.Fatal("description doesn't match")
+		t.Fail()
+	}
+
+	if newMap.MapFilename != savedMap.MapFileHash {
+		log.Fatal("filename doesn't match")
+		t.Fail()
+	}
+
 	//TODO: verify the data in redis
-	//Cleanup
+
+	conn.Do("flushall")
 }
 
 func copyFile(source, destination string) error {
