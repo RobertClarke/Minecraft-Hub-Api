@@ -52,7 +52,7 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 
 	dir, _ := os.Getwd()
 	downloads := path.Join(dir, "downloads")
-	//mapDir := path.Join(dir, "maps")
+	mapDir := path.Join(dir, "maps")
 	mapImages := path.Join(dir, "mapimages")
 
 	s.tracer.Println(dir)
@@ -64,16 +64,17 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 		s.tracer.Print(name)
 		md5Name := md5.Sum([]byte(name))
 		hash := fmt.Sprintf("%x", md5Name)
-
+		newMap.MapImageFileNames[i] = hash
 		err := os.Rename(path.Join(downloads, name), path.Join(mapImages, hash))
 		if err != nil {
-			panic(err)
+			return "", err
 		}
 	}
 
-	// move map zip file
-
-	// move all images
+	err = os.Rename(path.Join(downloads, newMap.MapFilename), path.Join(mapDir, newMap.MapFilename))
+	if err != nil {
+		return "", err
+	}
 
 	// add to database
 	return s.myBackend.CreateMap(user, newMap)

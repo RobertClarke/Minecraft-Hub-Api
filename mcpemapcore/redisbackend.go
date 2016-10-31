@@ -26,11 +26,15 @@ func init() {
 
 type RedisBackend struct {
 	currentDatabase int
+	logger          *log.Logger
 }
 
 func CreateRedisBackendWithDatabase(db int) *RedisBackend {
 	redisInstance := RedisBackend{}
 	redisInstance.currentDatabase = db
+
+	//redisInstance.logger = (log.New(ioutil.Discard, "TRACE:", log.Ldate|log.Ltime|log.Lshortfile))
+	redisInstance.logger = (log.New(os.Stdout, "TRACE:", log.Ldate|log.Ltime|log.Lshortfile))
 
 	var err error
 	conn, err = redis.Dial("tcp", address, redis.DialDatabase(redisInstance.currentDatabase))
@@ -50,22 +54,28 @@ func (r RedisBackend) CreateMap(user *User,
 	newMap *NewMap) (string, error) {
 
 	dir, _ := os.Getwd()
-	downloadDir := path.Join(dir, "downloads")
 	mapDir := path.Join(dir, "maps")
-	filePath := path.Join(downloadDir, newMap.MapFilename)
+	filePath := path.Join(mapDir, newMap.MapFilename)
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
-		log.Printf("FAILED Create map: file %v", newMap.MapFilename)
+		r.logger.Printf("FAILED Create map: file %v", newMap.MapFilename)
 		return "", errors.New("map doesn't exist")
 	} else {
-		log.Printf("Create map: file %v exists", newMap.MapFilename)
+		r.logger.Printf("Create map: file %v exists", newMap.MapFilename)
 	}
-	//TODO: verify map
-	//TODO: verify all images
 
-	err = copyFile(filePath, path.Join(mapDir, "m4sBABVgAAA=.zip"))
-	if err != nil {
-		return "", errors.New("copy failed")
+	imageDir := path.Join(dir, "mapimages")
+
+	for i := range newMap.MapImageFileNames {
+		iFn := path.Join(imageDir, newMap.MapImageFileNames[i])
+		r.logger.Printf("verifying %v", iFn)
+		_, err := os.Stat(iFn)
+		if os.IsNotExist(err) {
+			r.logger.Printf("FAILED Create map: imagefile %v", iFn)
+			return "", errors.New("map image doesn't exist " + iFn)
+		} else {
+			r.logger.Printf("Create map: imagefile %v exists", iFn)
+		}
 	}
 
 	theNewMap := Map{
@@ -119,30 +129,30 @@ func (r RedisBackend) UpdateMap(user *User,
 	var err error
 	_, err = conn.Do("HSET", "map:"+strconv.Itoa(mapid), "mapfilehash", pureHash)
 	if err != nil {
-		log.Fatal(err)
+		r.logger.Fatal(err)
 	}
 	_, err = conn.Do("HSET", "mapfilehash:"+pureHash, "id", strconv.Itoa(mapid))
 	if err != nil {
-		log.Fatal(err)
+		r.logger.Fatal(err)
 	}
 
 	var nextGood int
 	nextGood, err = redis.Int(conn.Do("INCR", "next_good"))
 	if err != nil {
-		log.Fatal(err)
+		r.logger.Fatal(err)
 	}
 	_, err = conn.Do("ZADD", "goodmapset", nextGood, mapid)
 	if err != nil {
-		log.Fatal(err)
+		r.logger.Fatal(err)
 	}
 	badid, err := redis.Int(conn.Do("ZSCORE", "badmapset", mapid))
 	if err != nil {
-		log.Fatal(err)
+		r.logger.Fatal(err)
 	}
 	//nextBad, err = redis.Int(conn.Do("INCR", "next_bad"))
 	_, err = conn.Do("ZREM", "badmapset", badid, mapid)
 	if err != nil {
-		log.Fatal(err)
+		r.logger.Fatal(err)
 	}
 }
 
