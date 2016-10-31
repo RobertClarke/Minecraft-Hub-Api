@@ -45,9 +45,24 @@ type createMapService struct {
 }
 
 func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, err error) {
-	//tracer := log.New(os.Stdout, "TRACE:", log.Ldate|log.Ltime|log.Lshortfile)
 	if user == nil {
 		return "", errors.New("not authenticated, no user")
+	}
+
+	if len(newMap.MapImageFileNames) == 0 {
+		return "", errors.New("must have at least 1 map image")
+	}
+
+	if len(newMap.Title) == 0 {
+		return "", errors.New("map must have a title")
+	}
+
+	if len(newMap.Description) == 0 {
+		return "", errors.New("map must have a description")
+	}
+
+	if len(newMap.MapFilename) == 0 {
+		return "", errors.New("map must have a filename")
 	}
 
 	dir, _ := os.Getwd()
@@ -55,12 +70,25 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 	mapDir := path.Join(dir, "maps")
 	mapImages := path.Join(dir, "mapimages")
 
+	filePath := path.Join(downloads, newMap.MapFilename)
+	_, err = os.Stat(filePath)
+	if os.IsNotExist(err) {
+		return "", errors.New("map file doesn't exist")
+	}
+
 	s.tracer.Println(dir)
 
 	// get md5 of mapname
 	// move map and rename
 	for i := range newMap.MapImageFileNames {
 		name := newMap.MapImageFileNames[i]
+
+		iFn := path.Join(downloads, name)
+		_, err = os.Stat(iFn)
+		if os.IsNotExist(err) {
+			return "", errors.New("map image doesn't exist " + iFn)
+		}
+
 		s.tracer.Print(name)
 		md5Name := md5.Sum([]byte(name))
 		hash := fmt.Sprintf("%x", md5Name)

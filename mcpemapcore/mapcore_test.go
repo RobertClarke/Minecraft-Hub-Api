@@ -31,11 +31,56 @@ func TestCreateMap(t *testing.T) {
 	mapservice := NewCreateMapServiceWithBackend(tb, logger)
 	u := User{}
 	newMap := NewMap{
-		Title:             "The test map",
-		Description:       "Describing the map",
-		MapFilename:       "m4sBABVgAAA=.zip",
-		MapImageFileNames: []string{"image1.png", "image2.png"},
+		Title:             "",
+		Description:       "",
+		MapFilename:       "",
+		MapImageFileNames: nil}
+
+	_, err := mapservice.CreateMap(nil, &newMap)
+	if err == nil || err.Error() != "not authenticated, no user" {
+		logger.Fatal("createmap not checking for nil user")
+		t.Fail()
 	}
+
+	_, err = mapservice.CreateMap(&u, &newMap)
+	if err == nil || err.Error() != "must have at least 1 map image" {
+		logger.Fatal("createmap not checking for images")
+		t.Fail()
+	}
+
+	newMap.MapImageFileNames = []string{"image1.png", "image2.png"}
+
+	_, err = mapservice.CreateMap(&u, &newMap)
+	if err == nil || err.Error() != "map must have a title" {
+		logger.Fatal("createmap not checking for empty title")
+		t.Fail()
+	}
+
+	newMap.Title = "Test Title"
+
+	_, err = mapservice.CreateMap(&u, &newMap)
+	if err == nil || err.Error() != "map must have a description" {
+		logger.Fatal("createmap not checking for empty description " + err.Error())
+		t.Fail()
+	}
+
+	newMap.Description = "Test description"
+
+	_, err = mapservice.CreateMap(&u, &newMap)
+	if err == nil || err.Error() != "map must have a filename" {
+		logger.Fatal("createmap not checking for empty filename " + err.Error())
+		t.Fail()
+	}
+
+	newMap.MapFilename = "ABVgAAA=.zip"
+
+	_, err = mapservice.CreateMap(&u, &newMap)
+	if err == nil || err.Error() != "map file doesn't exist" {
+		logger.Fatal("createmap not checking for empty filename " + err.Error())
+		t.Fail()
+	}
+
+	newMap.MapFilename = "m4sBABVgAAA=.zip"
 
 	dir, _ := os.Getwd()
 	testDir := path.Join(dir, "testdata")
@@ -48,18 +93,29 @@ func TestCreateMap(t *testing.T) {
 		name := newMap.MapImageFileNames[i]
 		source := path.Join(testDir, name)
 		dest := path.Join(downloadDir, name)
-		logger.Printf("Copying %v from %v to %v", name, source, dest)
+		logger.Printf("Test is Copying %v from %v to %v", name, source, dest)
 		err := copyFile(source, dest)
 		if err != nil {
-			log.Panic(err)
+			logger.Panic(err)
 		}
 	}
 
 	copyFile(path.Join(testDir, "m4sBABVgAAA=.zip"), path.Join(downloadDir, "m4sBABVgAAA=.zip"))
 
-	_, err := mapservice.CreateMap(&u, &newMap)
+	//check bad map images
+	newMap.MapImageFileNames = []string{"image.png", "image2.png"}
+
+	_, err = mapservice.CreateMap(&u, &newMap)
+	if err == nil || err.Error()[0:23] != "map image doesn't exist" {
+		logger.Fatal("createmap not checking for images:" + err.Error()[0:23])
+		t.Fail()
+	}
+
+	newMap.MapImageFileNames = []string{"image1.png", "image2.png"}
+
+	_, err = mapservice.CreateMap(&u, &newMap)
 	if err != nil {
-		log.Fatal("createmap failed")
+		logger.Fatal("createmap failed: " + err.Error())
 		t.Fail()
 	}
 
@@ -67,26 +123,26 @@ func TestCreateMap(t *testing.T) {
 	savedMap, err = GetMapFromRedis("1", "")
 	if savedMap == nil {
 
-		log.Fatal("no map")
+		logger.Fatal("no map")
 		t.Fail()
 	}
 	if err != nil {
-		log.Fatal("get map failed")
+		logger.Fatal("get map failed")
 		t.Fail()
 	}
 
 	if newMap.Title != savedMap.MapTitle {
-		log.Fatal("title doesn't match")
+		logger.Fatal("title doesn't match")
 		t.Fail()
 	}
 
 	if newMap.Description != savedMap.Description {
-		log.Fatal("description doesn't match")
+		logger.Fatal("description doesn't match")
 		t.Fail()
 	}
 
 	if newMap.MapFilename != savedMap.MapFileHash {
-		log.Fatal("filename doesn't match")
+		logger.Fatal("filename doesn't match")
 		t.Fail()
 	}
 

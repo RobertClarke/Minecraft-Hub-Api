@@ -302,6 +302,7 @@ func main() {
 	flag.Parse()
 	if *help {
 		flag.Usage()
+		return
 	}
 	var provider = redisauth.RedisUserProvider{}
 	//var provider = mysqlauth.MysqlAuthProvider{}
