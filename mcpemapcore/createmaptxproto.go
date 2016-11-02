@@ -13,6 +13,7 @@ type createMapRequest struct {
 }
 
 type createMapResponse struct {
+	Code  int
 	MapID string
 	Error string
 }
@@ -33,8 +34,9 @@ func HandleCreateMap(wr http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(&mapResponse, err, wr)
 		return
+	} else {
+		writeSuccess(&mapResponse, wr)
 	}
-	wr.WriteHeader(http.StatusOK)
 }
 
 func serializeResponse(r createMapResponse) (string, error) {
@@ -51,14 +53,30 @@ func deserializeRequest(r *http.Request) (*createMapRequest, error) {
 		return nil, err
 	}
 	var theMap createMapRequest
-	json.Unmarshal(bytes, &theMap)
+	err = json.Unmarshal(bytes, &theMap)
+	if err != nil {
+		return nil, err
+	}
 	return &theMap, nil
+}
+
+func writeSuccess(response *createMapResponse, wr http.ResponseWriter) {
+	response.Code = http.StatusOK
+	sr, err := serializeResponse(*response)
+	if err != nil {
+		//TODO: handle this log properly by using system error logging
+		log.Fatal(err.Error())
+		wr.WriteHeader(http.StatusBadRequest)
+	}
+	wr.WriteHeader(http.StatusOK)
+	fmt.Fprintf(wr, "%v", sr)
 }
 
 func writeError(response *createMapResponse, err error, wr http.ResponseWriter) {
 	//TODO replace with an interface to make generic
 	wr.WriteHeader(http.StatusBadRequest)
 	response.Error = err.Error()
+	response.Code = http.StatusBadRequest
 	//TODO make this a member of response struct so it can be made generic
 	sr, err := serializeResponse(*response)
 	if err != nil {

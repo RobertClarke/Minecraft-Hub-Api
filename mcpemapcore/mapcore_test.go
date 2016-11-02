@@ -1,7 +1,9 @@
 package mcpemapcore
 
 import (
+	"crypto/md5"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -24,11 +26,44 @@ func TestMySqlGetAllMaps(t *testing.T) {
 	fmt.Printf("got %v\n", len(maps))
 }
 
-func TestCreateMap(t *testing.T) {
+func prepare() (*CreateMapService, *log.Logger) {
 	conn.Do("flushdb")
-	logger := log.New(os.Stdout, "TRACE:", log.Ldate|log.Ltime|log.Lshortfile)
-	tb := CreateRedisBackendWithDatabase(1)
+	logger := log.New(os.Stdout, "trace:", log.Ldate|log.Ltime|log.Lshortfile)
+	tb := CreateRedisBackendWithDatabase(0)
 	mapservice := NewCreateMapServiceWithBackend(tb, logger)
+	return &mapservice, logger
+}
+
+func getHash(path string, logger *log.Logger) string {
+	logger.Printf("getting hash for map")
+	mapBytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		logger.Fatal("Test couldn't check checksum")
+	}
+	chkSum := md5.Sum(mapBytes)
+	sh := fmt.Sprintf("%x", chkSum)
+	return sh
+}
+
+func TestCreateMapBadUser(t *testing.T) {
+	mapservice, logger := prepare()
+
+	newMap := NewMap{
+		Title:             "",
+		Description:       "",
+		MapFilename:       "",
+		MapImageFileNames: nil}
+
+	_, err := (*mapservice).CreateMap(nil, &newMap)
+	if err == nil || err.Error() != "not authenticated, no user" {
+		logger.Fatal("createmap not checking for nil user")
+		t.Fail()
+	}
+}
+
+func TestCreateMapEmptyWithNoImages(t *testing.T) {
+	mapservice, logger := prepare()
+
 	u := User{}
 	newMap := NewMap{
 		Title:             "",
@@ -36,84 +71,148 @@ func TestCreateMap(t *testing.T) {
 		MapFilename:       "",
 		MapImageFileNames: nil}
 
-	_, err := mapservice.CreateMap(nil, &newMap)
-	if err == nil || err.Error() != "not authenticated, no user" {
-		logger.Fatal("createmap not checking for nil user")
-		t.Fail()
-	}
-
-	_, err = mapservice.CreateMap(&u, &newMap)
+	_, err := (*mapservice).CreateMap(&u, &newMap)
 	if err == nil || err.Error() != "must have at least 1 map image" {
 		logger.Fatal("createmap not checking for images")
 		t.Fail()
 	}
+}
+
+func TestCreateMapEmptyWithNoTitle(t *testing.T) {
+	mapservice, logger := prepare()
+
+	u := User{}
+	newMap := NewMap{
+		Title:             "",
+		Description:       "",
+		MapFilename:       "",
+		MapImageFileNames: nil}
 
 	newMap.MapImageFileNames = []string{"image1.png", "image2.png"}
 
-	_, err = mapservice.CreateMap(&u, &newMap)
+	_, err := (*mapservice).CreateMap(&u, &newMap)
 	if err == nil || err.Error() != "map must have a title" {
 		logger.Fatal("createmap not checking for empty title")
 		t.Fail()
 	}
+}
+
+func TestCreateMapEmptyWithNoDescription(t *testing.T) {
+	mapservice, logger := prepare()
+
+	u := User{}
+	newMap := NewMap{
+		Title:             "",
+		Description:       "",
+		MapFilename:       "",
+		MapImageFileNames: nil}
+
+	newMap.MapImageFileNames = []string{"image1.png", "image2.png"}
 
 	newMap.Title = "Test Title"
 
-	_, err = mapservice.CreateMap(&u, &newMap)
+	_, err := (*mapservice).CreateMap(&u, &newMap)
 	if err == nil || err.Error() != "map must have a description" {
 		logger.Fatal("createmap not checking for empty description " + err.Error())
 		t.Fail()
 	}
+}
 
-	newMap.Description = "Test description"
+func TestCreateMapEmptyWithNoFilename(t *testing.T) {
+	mapservice, logger := prepare()
 
-	_, err = mapservice.CreateMap(&u, &newMap)
+	u := User{}
+	newMap := NewMap{
+		Title:             "Title",
+		Description:       "Description",
+		MapFilename:       "",
+		MapImageFileNames: []string{"image1.png", "image2.png"},
+	}
+
+	_, err := (*mapservice).CreateMap(&u, &newMap)
 	if err == nil || err.Error() != "map must have a filename" {
 		logger.Fatal("createmap not checking for empty filename " + err.Error())
 		t.Fail()
 	}
+}
 
-	newMap.MapFilename = "ABVgAAA=.zip"
+func TestCreateMapEmptyWithBadFilename(t *testing.T) {
+	mapservice, logger := prepare()
 
-	_, err = mapservice.CreateMap(&u, &newMap)
+	u := User{}
+	newMap := NewMap{
+		Title:             "Title",
+		Description:       "Description",
+		MapFilename:       "xxxxx",
+		MapImageFileNames: []string{"image1.png", "image2.png"},
+	}
+
+	_, err := (*mapservice).CreateMap(&u, &newMap)
 	if err == nil || err.Error() != "map file doesn't exist" {
 		logger.Fatal("createmap not checking for empty filename " + err.Error())
 		t.Fail()
 	}
+}
 
-	newMap.MapFilename = "m4sBABVgAAA=.zip"
+func TestCreateMapEmptyWithMissingChecksum(t *testing.T) {
+	mapservice, logger := prepare()
 
-	dir, _ := os.Getwd()
-	testDir := path.Join(dir, "testdata")
-	downloadDir := path.Join(dir, "downloads")
-	mapDir := path.Join(dir, "maps")
-	mapImagesDir := path.Join(dir, "mapimages")
-	os.Mkdir(downloadDir, 0777)
-
-	for i := range newMap.MapImageFileNames {
-		name := newMap.MapImageFileNames[i]
-		source := path.Join(testDir, name)
-		dest := path.Join(downloadDir, name)
-		logger.Printf("Test is Copying %v from %v to %v", name, source, dest)
-		err := copyFile(source, dest)
-		if err != nil {
-			logger.Panic(err)
-		}
+	u := User{}
+	newMap := NewMap{
+		Title:             "Title",
+		Description:       "Description",
+		MapFilename:       "m4sBABVgAAA=.zip",
+		MapImageFileNames: []string{"image1.png", "image2.png"},
 	}
 
-	copyFile(path.Join(testDir, "m4sBABVgAAA=.zip"), path.Join(downloadDir, "m4sBABVgAAA=.zip"))
+	_, err := setupTestFiles(&newMap, logger)
 
-	//check bad map images
-	newMap.MapImageFileNames = []string{"image.png", "image2.png"}
-
-	_, err = mapservice.CreateMap(&u, &newMap)
-	if err == nil || err.Error()[0:23] != "map image doesn't exist" {
-		logger.Fatal("createmap not checking for images:" + err.Error()[0:23])
+	_, err = (*mapservice).CreateMap(&u, &newMap)
+	if err == nil || err.Error() != "checksum doesn't match" {
+		logger.Fatal("checksum doesn't match " + err.Error())
 		t.Fail()
 	}
+	cleanupTestDir()
+}
 
-	newMap.MapImageFileNames = []string{"image1.png", "image2.png"}
+func TestCreateMapEmptyWithMissingImage(t *testing.T) {
+	mapservice, logger := prepare()
 
-	_, err = mapservice.CreateMap(&u, &newMap)
+	u := User{}
+	newMap := NewMap{
+		Title:             "Title",
+		Description:       "Description",
+		MapFilename:       "m4sBABVgAAA=.zip",
+		MapImageFileNames: []string{"image.png", "image2.png"},
+	}
+
+	testDir, _ := setupTestFiles(&newMap, logger)
+
+	newMap.MapChecksum = getHash(path.Join(testDir, newMap.MapFilename), logger)
+
+	_, err := (*mapservice).CreateMap(&u, &newMap)
+	if err == nil || err.Error()[0:23] != "map image doesn't exist" {
+		logger.Fatal("createmap not checking for images:")
+		t.Fail()
+	}
+}
+
+func TestCreateMapEmptyWithGoodChecksum(t *testing.T) {
+	mapservice, logger := prepare()
+
+	u := User{}
+	newMap := NewMap{
+		Title:             "Title",
+		Description:       "Description",
+		MapFilename:       "m4sBABVgAAA=.zip",
+		MapImageFileNames: []string{"image1.png", "image2.png"},
+	}
+
+	testDir, _ := setupTestFiles(&newMap, logger)
+
+	newMap.MapChecksum = getHash(path.Join(testDir, newMap.MapFilename), logger)
+
+	_, err := (*mapservice).CreateMap(&u, &newMap)
 	if err != nil {
 		logger.Fatal("createmap failed: " + err.Error())
 		t.Fail()
@@ -145,10 +244,46 @@ func TestCreateMap(t *testing.T) {
 		logger.Fatal("filename doesn't match")
 		t.Fail()
 	}
+	cleanupTestDir()
+}
 
-	//TODO: verify the data in redis
+func setupTestFiles(newMap *NewMap, logger *log.Logger) (string, error) {
+	dir, _ := os.Getwd()
+	testDir := path.Join(dir, "testdata")
+	downloadDir := path.Join(dir, "downloads")
+	//mapDir := path.Join(dir, "maps")
+	//mapImagesDir := path.Join(dir, "mapimages")
+	os.Mkdir(downloadDir, 0777)
 
-	conn.Do("flushdb")
+	for i := range newMap.MapImageFileNames {
+		name := newMap.MapImageFileNames[i]
+		source := path.Join(testDir, name)
+		_, err := os.Stat(source)
+		if os.IsExist(err) {
+			dest := path.Join(downloadDir, name)
+			logger.Printf("Test is Copying %v from %v to %v", name, source, dest)
+			err := copyFile(source, dest)
+			if err != nil {
+				logger.Panic(err)
+			}
+		} else {
+			logger.Printf("Skipping %v\n", source)
+		}
+	}
+
+	err := copyFile(path.Join(testDir, "m4sBABVgAAA=.zip"), path.Join(downloadDir, "m4sBABVgAAA=.zip"))
+	if err != nil {
+		return testDir, err
+	} else {
+		return testDir, nil
+	}
+}
+
+func cleanupTestDir() {
+	dir, _ := os.Getwd()
+	downloadDir := path.Join(dir, "downloads")
+	mapDir := path.Join(dir, "maps")
+	mapImagesDir := path.Join(dir, "mapimages")
 
 	os.RemoveAll(downloadDir)
 	os.RemoveAll(mapDir)

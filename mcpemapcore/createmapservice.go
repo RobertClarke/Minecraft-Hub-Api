@@ -20,6 +20,7 @@ type NewMap struct {
 	Title             string
 	Description       string
 	MapFilename       string
+	MapChecksum       string
 	MapImageFileNames []string
 }
 
@@ -70,6 +71,18 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 	mapDir := path.Join(dir, "maps")
 	mapImages := path.Join(dir, "mapimages")
 
+	_, err = os.Stat(mapImages)
+	if os.IsNotExist(err) {
+		s.tracer.Println("Creating mapimages dir")
+		os.Mkdir(mapImages, 0777)
+	}
+
+	_, err = os.Stat(mapDir)
+	if os.IsNotExist(err) {
+		s.tracer.Println("Creating mapdir")
+		os.Mkdir(mapDir, 0777)
+	}
+
 	filePath := path.Join(downloads, newMap.MapFilename)
 	_, err = os.Stat(filePath)
 	if os.IsNotExist(err) {
@@ -77,6 +90,19 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 	}
 
 	s.tracer.Println(dir)
+
+	var mapBytes []byte
+	mapBytes, err = ioutil.ReadFile(filePath)
+	if err != nil {
+		return "", errors.New("error getting checksum for file")
+	}
+	chkSum := md5.Sum(mapBytes)
+	sh := fmt.Sprintf("%x", chkSum)
+	if sh != newMap.MapChecksum {
+		return "", errors.New("checksum doesn't match")
+	} else {
+		s.tracer.Println("Hashes match")
+	}
 
 	// get md5 of mapname
 	// move map and rename
@@ -89,7 +115,7 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 			return "", errors.New("map image doesn't exist " + iFn)
 		}
 
-		s.tracer.Print(name)
+		s.tracer.Println("Looking at file " + name)
 		md5Name := md5.Sum([]byte(name))
 		hash := fmt.Sprintf("%x", md5Name)
 		newMap.MapImageFileNames[i] = hash
@@ -99,11 +125,13 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 		}
 	}
 
+	s.tracer.Println("Done with images")
+
 	err = os.Rename(path.Join(downloads, newMap.MapFilename), path.Join(mapDir, newMap.MapFilename))
 	if err != nil {
 		return "", err
 	}
-
+	s.tracer.Println("Done with map rename")
 	// add to database
 	return s.myBackend.CreateMap(user, newMap)
 

@@ -53,15 +53,17 @@ func CreateRedisBackend() *RedisBackend {
 func (r RedisBackend) CreateMap(user *User,
 	newMap *NewMap) (string, error) {
 
+	r.logger.Println("RedisBackend:CreateMap")
+
 	dir, _ := os.Getwd()
 	mapDir := path.Join(dir, "maps")
 	filePath := path.Join(mapDir, newMap.MapFilename)
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
-		r.logger.Printf("FAILED Create map: file %v", newMap.MapFilename)
+		r.logger.Printf("FAILED Create map: file %v\n", newMap.MapFilename)
 		return "", errors.New("map doesn't exist")
 	} else {
-		r.logger.Printf("Create map: file %v exists", newMap.MapFilename)
+		r.logger.Printf("Create map: file %v exists\n", newMap.MapFilename)
 	}
 
 	imageDir := path.Join(dir, "mapimages")
@@ -71,10 +73,10 @@ func (r RedisBackend) CreateMap(user *User,
 		r.logger.Printf("verifying %v", iFn)
 		_, err := os.Stat(iFn)
 		if os.IsNotExist(err) {
-			r.logger.Printf("FAILED Create map: imagefile %v", iFn)
+			r.logger.Printf("FAILED Create map: imagefile %v\n", iFn)
 			return "", errors.New("map image doesn't exist " + iFn)
 		} else {
-			r.logger.Printf("Create map: imagefile %v exists", iFn)
+			r.logger.Printf("Create map: imagefile %v exists\n", iFn)
 		}
 	}
 
@@ -83,7 +85,6 @@ func (r RedisBackend) CreateMap(user *User,
 		Description: newMap.Description,
 		MapFileHash: newMap.MapFilename,
 	}
-
 	writeMapFromMap(&theNewMap)
 	return "", nil
 }
@@ -260,7 +261,6 @@ func WriteNextMap(object map[string]interface{}, good bool, mapfilehash string) 
 }
 
 func writeMapFromMap(m *Map) error {
-
 	//verify mapfilehash is not null
 	//verify downloaduri is not null
 
@@ -268,6 +268,7 @@ func writeMapFromMap(m *Map) error {
 	if err != nil {
 		return err
 	}
+	log.Printf("Writing map to redis for id:%v filehash:%v", postId, m.MapFileHash)
 	_, err = conn.Do("HMSET",
 		fmt.Sprintf("map:%d", postId),
 		"map_title", m.MapTitle,
@@ -290,6 +291,7 @@ func writeMapFromMap(m *Map) error {
 	if err != nil {
 		return err
 	}
+	log.Println("Map written")
 	return nil
 }
 
