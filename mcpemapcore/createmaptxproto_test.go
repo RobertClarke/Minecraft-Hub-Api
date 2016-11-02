@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestGetFavories(t *testing.T) {
+func TestCreateMap(t *testing.T) {
 	logger := log.New(os.Stdout, "TRACE:", log.Ldate|log.Ltime|log.Lshortfile)
 	ts := httptest.NewServer(http.HandlerFunc(auth.RequireTokenAuthentication(HandleCreateMap)))
 	defer ts.Close()
@@ -70,7 +70,6 @@ func TestGetFavories(t *testing.T) {
 	}
 
 	var mapBytes []byte
-	logger.Printf("getting hash for map")
 	mapBytes, err = ioutil.ReadFile(path.Join(testDir, request.Map.MapFilename))
 	if err != nil {
 		logger.Fatal("Test couldn't check checksum")
@@ -78,10 +77,11 @@ func TestGetFavories(t *testing.T) {
 	chkSum := md5.Sum(mapBytes)
 	sh := fmt.Sprintf("%x", chkSum)
 	request.Map.MapChecksum = sh
+	logger.Printf("getting hash for map %v\n", sh)
 
 	res = testGet(ts, request, "1", t)
 	if res.Code != http.StatusOK {
-		log.Fatal("expected malformed payload:", res.Error)
+		log.Fatal("expected: malformed payload got:", res.Error)
 	}
 	//TODO Checksum maps and images
 }

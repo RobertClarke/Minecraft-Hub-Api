@@ -113,6 +113,8 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 		_, err = os.Stat(iFn)
 		if os.IsNotExist(err) {
 			return "", errors.New("map image doesn't exist " + iFn)
+		} else {
+			s.tracer.Printf("map image %v exists\n", iFn)
 		}
 
 		s.tracer.Println("Looking at file " + name)

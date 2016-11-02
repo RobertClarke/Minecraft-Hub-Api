@@ -175,6 +175,32 @@ func TestCreateMapEmptyWithMissingChecksum(t *testing.T) {
 	cleanupTestDir()
 }
 
+func TestSetupTestFile(t *testing.T) {
+	_, logger := prepare()
+
+	newMap := NewMap{
+		Title:             "Title",
+		Description:       "Description",
+		MapFilename:       "m4sBABVgAAA=.zip",
+		MapImageFileNames: []string{"image1.png", "image2.png"},
+	}
+
+	dir, _ := os.Getwd()
+	testDir := path.Join(dir, "testdata")
+	downloadDir := path.Join(dir, "downloads")
+	_, err := os.Stat(path.Join(testDir, newMap.MapImageFileNames[0]))
+	if os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+
+	_, err = setupTestFiles(&newMap, logger)
+
+	_, err = os.Stat(path.Join(downloadDir, newMap.MapImageFileNames[0]))
+	if os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+}
+
 func TestCreateMapEmptyWithMissingImage(t *testing.T) {
 	mapservice, logger := prepare()
 
@@ -248,6 +274,7 @@ func TestCreateMapEmptyWithGoodChecksum(t *testing.T) {
 }
 
 func setupTestFiles(newMap *NewMap, logger *log.Logger) (string, error) {
+	logger.Printf("setuptestfiles\n")
 	dir, _ := os.Getwd()
 	testDir := path.Join(dir, "testdata")
 	downloadDir := path.Join(dir, "downloads")
@@ -258,8 +285,8 @@ func setupTestFiles(newMap *NewMap, logger *log.Logger) (string, error) {
 	for i := range newMap.MapImageFileNames {
 		name := newMap.MapImageFileNames[i]
 		source := path.Join(testDir, name)
-		_, err := os.Stat(source)
-		if os.IsExist(err) {
+		ino, _ := os.Stat(source)
+		if ino != nil {
 			dest := path.Join(downloadDir, name)
 			logger.Printf("Test is Copying %v from %v to %v", name, source, dest)
 			err := copyFile(source, dest)
