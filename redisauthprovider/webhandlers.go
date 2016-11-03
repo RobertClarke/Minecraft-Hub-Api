@@ -27,6 +27,10 @@ func hasFailed(wr http.ResponseWriter, err error) bool {
 	return false
 }
 
+func RegisterUserRegistrationHandlerNoMux() {
+	http.HandleFunc("/register", registerUser)
+}
+
 func RegisterUserRegistrationHandler(mux *http.ServeMux) {
 	mux.HandleFunc("/register", registerUser)
 }

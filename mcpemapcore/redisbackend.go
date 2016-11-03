@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
@@ -445,6 +446,9 @@ func GetMapFromRedis(mapId string, siteRoot string) (*Map, error) {
 	}
 
 	u.MapOriginalUri = u.MapDownloadUri
+	if len(siteRoot) >= 7 && strings.ToLower(siteRoot) != "http://" {
+		siteRoot = "http://" + siteRoot
+	}
 	//TODO: enable this rewriting of download uri to be disabled and configured.
 	//u.MapDownloadUri = fmt.Sprintf("http://%v/maps/%v.zip", siteRoot, u.MapFileHash)
 	u.MapDownloadUri = fmt.Sprintf("%v/maps/%v.zip", siteRoot, u.MapFileHash)
@@ -486,6 +490,9 @@ func GetMapImageFromRedis(mapImageId string, siteRoot string) (*MapImage, error)
 		return nil, err
 	}
 	//u.MapImageUri = fmt.Sprintf("http://%v/mapimages/%v.jpeg", siteRoot, u.MapImageHash)
+	if len(siteRoot) >= 7 && strings.ToLower(siteRoot[:7]) != "http://" {
+		siteRoot = "http://" + siteRoot
+	}
 	u.MapImageUri = fmt.Sprintf("%v/mapimages/%v.jpeg", siteRoot, u.MapImageHash)
 	return u, nil
 }

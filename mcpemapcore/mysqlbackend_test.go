@@ -2,12 +2,12 @@ package mcpemapcore
 
 import "testing"
 
-func TestUploadMapDownloadCount(t *testing.T) {
+func testUploadMapDownloadCount(t *testing.T) {
 	sql := MySqlBackend{}
 	sql.UpdateMapDownloadCount("b22bf60c3bf35994c606059a59ed1f99")
 }
 
-func TestUpdateFavoriteMap(t *testing.T) {
+func testUpdateFavoriteMap(t *testing.T) {
 	u := &User{}
 	var mapId string
 	mapId = "3"

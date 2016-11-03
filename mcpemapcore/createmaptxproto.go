@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 )
 
@@ -65,7 +64,6 @@ func writeSuccess(response *createMapResponse, wr http.ResponseWriter) {
 	sr, err := serializeResponse(*response)
 	if err != nil {
 		//TODO: handle this log properly by using system error logging
-		log.Fatal(err.Error())
 		wr.WriteHeader(http.StatusBadRequest)
 	}
 	wr.WriteHeader(http.StatusOK)
@@ -81,7 +79,6 @@ func writeError(response *createMapResponse, err error, wr http.ResponseWriter) 
 	sr, err := serializeResponse(*response)
 	if err != nil {
 		//TODO: handle this log properly by using system error logging
-		log.Fatal(err.Error())
 		wr.WriteHeader(http.StatusBadRequest)
 	}
 	fmt.Fprintf(wr, "%v", sr)

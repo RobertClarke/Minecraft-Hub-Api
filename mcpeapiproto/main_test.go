@@ -78,31 +78,3 @@ func TestGetFavories(t *testing.T) {
 	ts.URL += "/getuserfavorites"
 	testGet(ts, nil, "1", t)
 }
-
-func testGet(ser *httptest.Server, param interface{}, userid string, t *testing.T) {
-	var currentAuth jwtauth.JwtAuthProvider
-
-	token, _ := currentAuth.GenerateToken(userid)
-	client := &http.Client{}
-
-	var req *http.Request
-
-	if param != nil {
-		jsonBytes, err := json.Marshal(param)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-		req, _ = http.NewRequest("GET", ser.URL, bytes.NewBuffer(jsonBytes))
-	} else {
-		req, _ = http.NewRequest("GET", ser.URL, nil)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-
-	result, _ := client.Do(req)
-	if result.StatusCode != http.StatusOK {
-		t.Fail()
-	}
-}
