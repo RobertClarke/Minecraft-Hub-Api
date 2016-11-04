@@ -69,6 +69,14 @@ func (r RedisBackend) CreateMap(user *User,
 
 	imageDir := path.Join(dir, "mapimages")
 
+	theNewMap := Map{
+		MapTitle:    newMap.Title,
+		Description: newMap.Description,
+		//MapFileHash:     sanitize(newMap.MapFilename),
+		MapFileHash:     newMap.MapChecksum,
+		MapImageUriList: make([]*MapImage, len(newMap.MapImageFileNames)),
+	}
+
 	for i := range newMap.MapImageFileNames {
 		iFn := path.Join(imageDir, newMap.MapImageFileNames[i])
 		r.logger.Printf("verifying %v", iFn)
@@ -79,15 +87,27 @@ func (r RedisBackend) CreateMap(user *User,
 		} else {
 			r.logger.Printf("Create map: imagefile %v exists\n", iFn)
 		}
+
+		//Add the URI here
+		var mi MapImage = MapImage{}
+		mi.MapImageHash = newMap.MapImageFileNames[i]
+		mi.MapImageUri = mi.MapImageHash
+
+		theNewMap.MapImageUriList[i] = &mi
 	}
 
-	theNewMap := Map{
-		MapTitle:    newMap.Title,
-		Description: newMap.Description,
-		MapFileHash: newMap.MapFilename,
+	//writeMapFromMap(&theNewMap)
+	postId, err := redis.Int(conn.Do("INCR", "next_map_id"))
+	if err != nil {
+		return "", err
 	}
-	writeMapFromMap(&theNewMap)
-	return "", nil
+	err = writeMapFromMap(postId, &theNewMap, true)
+	return "", err
+}
+
+func sanitize(name string) string {
+	res := strings.Split(".", name)
+	return res[0]
 }
 
 func (r RedisBackend) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
@@ -261,7 +281,7 @@ func WriteNextMap(object map[string]interface{}, good bool, mapfilehash string) 
 	return err
 }
 
-func writeMapFromMap(m *Map) error {
+func KillwriteMapFromMap(m *Map) error {
 	//verify mapfilehash is not null
 	//verify downloaduri is not null
 
@@ -296,6 +316,90 @@ func writeMapFromMap(m *Map) error {
 	return nil
 }
 
+func writeMapFromMap(postId int, m *Map, good bool) error {
+	var err error
+	var nextGood, nextBad, nextTested, nextFeatured int
+	_, err = conn.Do("HMSET",
+		fmt.Sprintf("map:%d", postId),
+		"map_title", m.MapTitle,
+		"description", m.Description,
+		"author", m.Author,
+		"author_uri", m.AuthorUri,
+		"mapdownloaduri", m.MapDownloadUri,
+		"mapfilehash", m.MapFileHash,
+		"numviews", 0,
+		"tested", 1,
+		"featured", 1,
+		"time", time.Now().Unix())
+
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.Do("HMSET",
+		"mapfilehash:"+m.MapFileHash,
+		"id", fmt.Sprintf("%d", postId))
+
+	if err != nil {
+		return err
+	}
+
+	if m.Tested == true {
+		if good {
+			nextTested, err = redis.Int(conn.Do("INCR", "next_tested"))
+			conn.Do("ZADD", "testedmapset", nextTested, postId)
+		}
+		//conn.Do("LPUSH", "testedmaplist", postId)
+		_, err = redis.Int(conn.Do("HINCRBY", "stats", "total_tested", 1))
+		if good {
+			_, err = redis.Int(conn.Do("HINCRBY", "stats", "total_good_tested", 1))
+		} else {
+			_, err = redis.Int(conn.Do("HINCRBY", "stats", "total_bad_tested", 1))
+		}
+	}
+	if m.Featured == true {
+		if good {
+			nextFeatured, err = redis.Int(conn.Do("INCR", "next_featured"))
+			conn.Do("ZADD", "featuredmapset", nextFeatured, postId)
+		}
+		//conn.Do("LPUSH", "featuredmaplist", postId)
+		_, err = redis.Int(conn.Do("INCR", "total_featured"))
+		if good {
+			_, err = redis.Int(conn.Do("HINCRBY", "stats", "total_good_featured", 1))
+		} else {
+			_, err = redis.Int(conn.Do("HINCRBY", "stats", "total_bad_featured", 1))
+		}
+	}
+	if good {
+		_, err = redis.Int(conn.Do("HINCRBY", "stats", "total_good", 1))
+	} else {
+		_, err = redis.Int(conn.Do("HINCRBY", "stats", "total_bad", 1))
+	}
+	_, err = redis.Int(conn.Do("HINCRBY", "stats", "total_maps", 1))
+	if err != nil {
+		return err
+	}
+
+	err = WriteImageUriListNoDownload(postId, m.MapImageUriList)
+	if err != nil {
+		return err
+	}
+
+	if good {
+		nextGood, err = redis.Int(conn.Do("INCR", "next_good"))
+		conn.Do("ZADD", "goodmapset", nextGood, postId)
+	} else {
+		nextBad, err = redis.Int(conn.Do("INCR", "next_bad"))
+		conn.Do("ZADD", "badmapset", nextBad, postId)
+	}
+	if err != nil {
+		return err
+	}
+
+	//uriList := object["MapUriList"].([]map[string]interface{})
+
+	return err
+}
 func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash string) error {
 	var err error
 	var nextGood, nextBad, nextTested, nextFeatured int
@@ -379,6 +483,32 @@ func writeMap(postId int, object map[string]interface{}, good bool, mapfilehash 
 
 	//uriList := object["MapUriList"].([]map[string]interface{})
 
+	return err
+}
+
+func WriteImageUriListNoDownload(postId int, maps []*MapImage) error {
+	log.Printf("writing map image list %v\n", len(maps))
+	var err error
+	for i := range maps {
+		actual := *(maps[i])
+		mapImageId, err := redis.Int(conn.Do("INCR", "next_mapImage_id"))
+		if err != nil {
+			return err
+		}
+		_, err = conn.Do("HMSET",
+			fmt.Sprintf("mapimage:%d", mapImageId),
+			"mapimageuri", actual.MapImageUri,
+			"mapimagehash", actual.MapImageHash)
+
+		if err != nil {
+			return err
+		}
+
+		_, err = conn.Do("LPUSH", "mapimages:"+strconv.Itoa(postId), mapImageId)
+		if err != nil {
+			return err
+		}
+	}
 	return err
 }
 
@@ -493,6 +623,6 @@ func GetMapImageFromRedis(mapImageId string, siteRoot string) (*MapImage, error)
 	if len(siteRoot) >= 7 && strings.ToLower(siteRoot[:7]) != "http://" {
 		siteRoot = "http://" + siteRoot
 	}
-	u.MapImageUri = fmt.Sprintf("%v/mapimages/%v.jpeg", siteRoot, u.MapImageHash)
+	u.MapImageUri = fmt.Sprintf("%v/mapimages/%v", siteRoot, u.MapImageHash)
 	return u, nil
 }

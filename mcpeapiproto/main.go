@@ -134,7 +134,7 @@ func (h LogHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	_, fn := path.Split(r.RequestURI)
 	wp := path.Ext(fn)
 	fnnp := fn[:len(fn)-len(wp)]
-	fmt.Println("file:" + wp)
+	fmt.Printf("file:%v extension:%v\n", fnnp, wp)
 	mcpemapcore.UpdateMapDownloadCount(fnnp)
 	h.wrapper.ServeHTTP(rw, r)
 }
@@ -223,6 +223,7 @@ func Upload(w http.ResponseWriter, req *http.Request) {
 }
 
 func CreateFromUpload(wr http.ResponseWriter, r *http.Request) {
+	fmt.Println("DONT BE HERE")
 	user := GetUser(wr, r)
 	if user == nil {
 		fmt.Printf("shit user is nil after get user\n")
@@ -321,11 +322,11 @@ func main() {
 	mux.HandleFunc("/securehello", auth.CorsOptions(auth.RequireTokenAuthentication(SecureHello)))
 	mux.HandleFunc("/setfavoritemap", auth.CorsOptions(auth.RequireTokenAuthentication(UpdateFavoriteMap)))
 	mux.HandleFunc("/getuserfavorites", auth.CorsOptions(auth.RequireTokenAuthentication(GetMaps)))
+	mux.HandleFunc("/createmapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(mcpemapcore.HandleCreateMap)))
 	mux.HandleFunc("/admin/getbadmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetBadMapList)))
 	mux.HandleFunc("/admin/geteditedmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetEditedMapList)))
 	mux.HandleFunc("/admin/updatemapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(AdminUpdateMapFromUpload)))
 	mux.HandleFunc("/upload", auth.CorsOptions(auth.RequireTokenAuthentication(Upload)))
-	mux.HandleFunc("/createmapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(CreateFromUpload)))
 	// use http.stripprefix to redirect
 	//http.Handle("/maps/", http.FileServer(http.Dir(".")))
 	mux.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))

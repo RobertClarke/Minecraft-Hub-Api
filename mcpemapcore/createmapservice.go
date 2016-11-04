@@ -67,7 +67,7 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 	}
 
 	dir, _ := os.Getwd()
-	downloads := path.Join(dir, "downloads")
+	downloads := path.Join(path.Join(dir, "uploads"), user.Username)
 	mapDir := path.Join(dir, "maps")
 	mapImages := path.Join(dir, "mapimages")
 
@@ -86,7 +86,7 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 	filePath := path.Join(downloads, newMap.MapFilename)
 	_, err = os.Stat(filePath)
 	if os.IsNotExist(err) {
-		return "", errors.New("map file doesn't exist")
+		return "", errors.New(fmt.Sprintf("map file doesn't exist filename: %v server path %v", newMap.MapFilename, filePath))
 	}
 
 	s.tracer.Println(dir)
@@ -103,6 +103,7 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 	} else {
 		s.tracer.Println("Hashes match")
 	}
+	newMap.MapFilename = sh
 
 	// get md5 of mapname
 	// move map and rename
@@ -129,7 +130,7 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 
 	s.tracer.Println("Done with images")
 
-	err = os.Rename(path.Join(downloads, newMap.MapFilename), path.Join(mapDir, newMap.MapFilename))
+	err = os.Rename(path.Join(downloads, newMap.MapFilename), path.Join(mapDir, newMap.MapChecksum))
 	if err != nil {
 		return "", err
 	}

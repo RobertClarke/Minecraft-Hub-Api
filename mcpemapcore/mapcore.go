@@ -18,7 +18,6 @@ var (
 )
 
 func init() {
-
 	//currentBackend = &MySqlBackend{}
 	//currentBackend = &RedisBackend{}
 	currentBackend = CreateRedisBackend()

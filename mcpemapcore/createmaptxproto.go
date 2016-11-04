@@ -4,24 +4,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 )
 
-type createMapRequest struct {
+type CreateMapRequest struct {
 	Map NewMap
 }
 
-type createMapResponse struct {
+type CreateMapResponse struct {
 	Code  int
 	MapID string
 	Error string
 }
 
 func HandleCreateMap(wr http.ResponseWriter, r *http.Request) {
+	tracer := log.New(os.Stdout, "TRACE:", log.Ldate|log.Ltime|log.Lshortfile)
+	tracer.Printf("HandleCreateMapi\n")
 	userid := r.Header.Get("userid")
 	u, err := LoadUserInfo(userid)
 
-	mapResponse := createMapResponse{}
+	mapResponse := CreateMapResponse{}
 	theMapRequest, err := deserializeRequest(r)
 	if err != nil {
 		writeError(&mapResponse, err, wr)
@@ -38,7 +42,7 @@ func HandleCreateMap(wr http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func serializeResponse(r createMapResponse) (string, error) {
+func serializeResponse(r CreateMapResponse) (string, error) {
 	st, err := json.Marshal(r)
 	if err != nil {
 		return "", err
@@ -46,12 +50,12 @@ func serializeResponse(r createMapResponse) (string, error) {
 	return string(st), nil
 }
 
-func deserializeRequest(r *http.Request) (*createMapRequest, error) {
+func deserializeRequest(r *http.Request) (*CreateMapRequest, error) {
 	bytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
-	var theMap createMapRequest
+	var theMap CreateMapRequest
 	err = json.Unmarshal(bytes, &theMap)
 	if err != nil {
 		return nil, err
@@ -59,7 +63,7 @@ func deserializeRequest(r *http.Request) (*createMapRequest, error) {
 	return &theMap, nil
 }
 
-func writeSuccess(response *createMapResponse, wr http.ResponseWriter) {
+func writeSuccess(response *CreateMapResponse, wr http.ResponseWriter) {
 	response.Code = http.StatusOK
 	sr, err := serializeResponse(*response)
 	if err != nil {
@@ -70,7 +74,7 @@ func writeSuccess(response *createMapResponse, wr http.ResponseWriter) {
 	fmt.Fprintf(wr, "%v", sr)
 }
 
-func writeError(response *createMapResponse, err error, wr http.ResponseWriter) {
+func writeError(response *CreateMapResponse, err error, wr http.ResponseWriter) {
 	//TODO replace with an interface to make generic
 	wr.WriteHeader(http.StatusBadRequest)
 	response.Error = err.Error()
