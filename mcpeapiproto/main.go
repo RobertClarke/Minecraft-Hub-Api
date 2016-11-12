@@ -22,6 +22,7 @@ import (
 
 	"github.com/clarkezone/jwtauth-go"
 	"github.com/dkumor/acmewrapper"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type MapListResponse struct {
@@ -135,6 +136,7 @@ func (h LogHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	wp := path.Ext(fn)
 	fnnp := fn[:len(fn)-len(wp)]
 	fmt.Printf("file:%v extension:%v\n", fnnp, wp)
+	downloadCounter.Add(1)
 	mcpemapcore.UpdateMapDownloadCount(fnnp)
 	h.wrapper.ServeHTTP(rw, r)
 }
@@ -296,6 +298,30 @@ func configureTLS(hostname string) (net.Listener, *tls.Config) {
 	return listener, tlsconfig
 }
 
+var (
+	downloadCounter = prometheus.NewCounter(prometheus.CounterOpts{Name: "mchub_mapdownloads", Help: "count of map downloads"})
+	apiCallCounter  = prometheus.NewCounter(prometheus.CounterOpts{Name: "mchub_apicalls", Help: "count of api calls"})
+)
+
+func init() {
+	err := prometheus.Register(downloadCounter)
+	if err != nil {
+		log.Fatal("Failed to register download counter:" + err.Error())
+	}
+
+	err = prometheus.Register(apiCallCounter)
+	if err != nil {
+		log.Fatal("Failed to register apicall counter:" + err.Error())
+	}
+}
+
+func ApiCounter(fn http.HandlerFunc) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		apiCallCounter.Add(1)
+		fn(rw, r)
+	}
+}
+
 func main() {
 	var err error
 	useSsl := flag.Bool("ssl", false, "enable SSL")
@@ -305,28 +331,32 @@ func main() {
 		flag.Usage()
 		return
 	}
+
 	var provider = redisauth.RedisUserProvider{}
 	//var provider = mysqlauth.MysqlAuthProvider{}
 	auth := jwtauth.CreateApiSecurity(provider)
 
 	mux := http.NewServeMux()
+
+	mux.Handle("/metrics", prometheus.Handler())
+
 	auth.RegisterLoginHandlerMux(mux)
 	//mysqlauth.RegisterUserRegistrationHandler(mux) <-- user registration needs hooking up to the real db
 	redisauth.RegisterUserRegistrationHandler(mux)
 
-	mux.HandleFunc("/hello", auth.CorsOptions(HelloServer))
-	mux.HandleFunc("/getmaplist", auth.CorsOptions(GetMaps))
-	mux.HandleFunc("/getfeaturedmaplist", auth.CorsOptions(GetMaps))
-	mux.HandleFunc("/getmostdownloaded", auth.CorsOptions(GetMaps))
-	mux.HandleFunc("/getmostfavorited", auth.CorsOptions(GetMaps))
-	mux.HandleFunc("/securehello", auth.CorsOptions(auth.RequireTokenAuthentication(SecureHello)))
-	mux.HandleFunc("/setfavoritemap", auth.CorsOptions(auth.RequireTokenAuthentication(UpdateFavoriteMap)))
-	mux.HandleFunc("/getuserfavorites", auth.CorsOptions(auth.RequireTokenAuthentication(GetMaps)))
-	mux.HandleFunc("/createmapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(mcpemapcore.HandleCreateMap)))
-	mux.HandleFunc("/admin/getbadmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetBadMapList)))
-	mux.HandleFunc("/admin/geteditedmaplist", auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetEditedMapList)))
-	mux.HandleFunc("/admin/updatemapfromupload", auth.CorsOptions(auth.RequireTokenAuthentication(AdminUpdateMapFromUpload)))
-	mux.HandleFunc("/upload", auth.CorsOptions(auth.RequireTokenAuthentication(Upload)))
+	mux.HandleFunc("/hello", ApiCounter(auth.CorsOptions(HelloServer)))
+	mux.HandleFunc("/getmaplist", ApiCounter(auth.CorsOptions(GetMaps)))
+	mux.HandleFunc("/getfeaturedmaplist", ApiCounter(auth.CorsOptions(GetMaps)))
+	mux.HandleFunc("/getmostdownloaded", ApiCounter(auth.CorsOptions(GetMaps)))
+	mux.HandleFunc("/getmostfavorited", ApiCounter(auth.CorsOptions(GetMaps)))
+	mux.HandleFunc("/securehello", ApiCounter(auth.CorsOptions(auth.RequireTokenAuthentication(SecureHello))))
+	mux.HandleFunc("/setfavoritemap", ApiCounter(auth.CorsOptions(auth.RequireTokenAuthentication(UpdateFavoriteMap))))
+	mux.HandleFunc("/getuserfavorites", ApiCounter(auth.CorsOptions(auth.RequireTokenAuthentication(GetMaps))))
+	mux.HandleFunc("/createmapfromupload", ApiCounter(auth.CorsOptions(auth.RequireTokenAuthentication(mcpemapcore.HandleCreateMap))))
+	mux.HandleFunc("/admin/getbadmaplist", ApiCounter(auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetBadMapList))))
+	mux.HandleFunc("/admin/geteditedmaplist", ApiCounter(auth.CorsOptions(auth.RequireTokenAuthentication(AdminGetEditedMapList))))
+	mux.HandleFunc("/admin/updatemapfromupload", ApiCounter(auth.CorsOptions(auth.RequireTokenAuthentication(AdminUpdateMapFromUpload))))
+	mux.HandleFunc("/upload", auth.CorsOptions(ApiCounter(auth.RequireTokenAuthentication(Upload))))
 	// use http.stripprefix to redirect
 	//http.Handle("/maps/", http.FileServer(http.Dir(".")))
 	mux.Handle("/maps/", CreateLogHandler(http.FileServer(http.Dir("."))))
