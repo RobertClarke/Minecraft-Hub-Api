@@ -59,8 +59,9 @@ type Map struct {
 }
 
 type MapImage struct {
-	MapImageUri  string `redis:"mapimageuri"`
-	MapImageHash string `redis:"mapimagehash"`
+	MapImageUri      string `redis:"mapimageuri"`
+	MapImageHash     string `redis:"mapimagehash"`
+	MapImageFilename string `redis:"mapimagefilename"`
 }
 
 type Stats struct {
@@ -150,7 +151,7 @@ func DownloadContent(uri string, dir string, acceptMime string, ext string) (boo
 			log.Fatal(err)
 		}
 		fn := md5.Sum([]byte(uri))
-		filename := fmt.Sprintf("%x.%v", fn, ext)
+		filename := fmt.Sprintf("%x%v", fn, ext)
 		hash := fmt.Sprintf("%x", fn)
 		filepath := fmt.Sprintf("%v/%v", dir, filename)
 		fmt.Println(filepath)

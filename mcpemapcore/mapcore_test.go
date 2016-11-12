@@ -187,7 +187,7 @@ func TestSetupTestFile(t *testing.T) {
 
 	dir, _ := os.Getwd()
 	testDir := path.Join(dir, "testdata")
-	downloadDir := path.Join(dir, "downloads")
+	downloadDir := path.Join(path.Join(dir, "uploads"), "foo")
 	_, err := os.Stat(path.Join(testDir, newMap.MapImageFileNames[0]))
 	if os.IsNotExist(err) {
 		t.Fatal(err)
@@ -226,7 +226,10 @@ func TestCreateMapEmptyWithMissingImage(t *testing.T) {
 func TestCreateMapEmptyWithGoodChecksum(t *testing.T) {
 	mapservice, logger := prepare()
 
+	cleanupTestDir()
+
 	u := User{}
+	u.Username = "foo"
 	newMap := NewMap{
 		Title:             "Title",
 		Description:       "Description",
@@ -237,6 +240,8 @@ func TestCreateMapEmptyWithGoodChecksum(t *testing.T) {
 	testDir, _ := setupTestFiles(&newMap, logger)
 
 	newMap.MapChecksum = getHash(path.Join(testDir, newMap.MapFilename), logger)
+
+	_ = "breakpoint"
 
 	_, err := (*mapservice).CreateMap(&u, &newMap)
 	if err != nil {
@@ -277,10 +282,20 @@ func setupTestFiles(newMap *NewMap, logger *log.Logger) (string, error) {
 	logger.Printf("setuptestfiles\n")
 	dir, _ := os.Getwd()
 	testDir := path.Join(dir, "testdata")
-	downloadDir := path.Join(dir, "downloads")
+	downloadDir := path.Join(dir, "uploads")
 	//mapDir := path.Join(dir, "maps")
 	//mapImagesDir := path.Join(dir, "mapimages")
-	os.Mkdir(downloadDir, 0777)
+	err := os.Mkdir(downloadDir, 0777)
+	if err != nil {
+		logger.Panic(err)
+	}
+
+	downloadDir = path.Join(downloadDir, "foo")
+
+	err = os.Mkdir(downloadDir, 0777)
+	if err != nil {
+		logger.Panic(err)
+	}
 
 	for i := range newMap.MapImageFileNames {
 		name := newMap.MapImageFileNames[i]
@@ -289,7 +304,7 @@ func setupTestFiles(newMap *NewMap, logger *log.Logger) (string, error) {
 		if ino != nil {
 			dest := path.Join(downloadDir, name)
 			logger.Printf("Test is Copying %v from %v to %v", name, source, dest)
-			err := copyFile(source, dest)
+			err = copyFile(source, dest)
 			if err != nil {
 				logger.Panic(err)
 			}
@@ -298,7 +313,7 @@ func setupTestFiles(newMap *NewMap, logger *log.Logger) (string, error) {
 		}
 	}
 
-	err := copyFile(path.Join(testDir, "m4sBABVgAAA=.zip"), path.Join(downloadDir, "m4sBABVgAAA=.zip"))
+	err = copyFile(path.Join(testDir, "m4sBABVgAAA=.zip"), path.Join(downloadDir, "m4sBABVgAAA=.zip"))
 	if err != nil {
 		return testDir, err
 	} else {
@@ -308,7 +323,7 @@ func setupTestFiles(newMap *NewMap, logger *log.Logger) (string, error) {
 
 func cleanupTestDir() {
 	dir, _ := os.Getwd()
-	downloadDir := path.Join(dir, "downloads")
+	downloadDir := path.Join(dir, "uploads")
 	mapDir := path.Join(dir, "maps")
 	mapImagesDir := path.Join(dir, "mapimages")
 

@@ -44,7 +44,7 @@ func TestCreateMap(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(auth.RequireTokenAuthentication(HandleCreateMap)))
 	defer ts.Close()
 
-	request := createMapRequest{}
+	request := CreateMapRequest{}
 	request.Map = NewMap{}
 	request.Map.Title = "Hello Map"
 	request.Map.Description = "Hello Description"
@@ -86,7 +86,7 @@ func TestCreateMap(t *testing.T) {
 	//TODO Checksum maps and images
 }
 
-func testGet(ser *httptest.Server, param interface{}, userid string, t *testing.T) createMapResponse {
+func testGet(ser *httptest.Server, param interface{}, userid string, t *testing.T) CreateMapResponse {
 	var currentAuth jwtauth.JwtAuthProvider
 
 	token, _ := currentAuth.GenerateToken(userid)
@@ -110,7 +110,7 @@ func testGet(ser *httptest.Server, param interface{}, userid string, t *testing.
 
 	result, _ := client.Do(req)
 	res, _ := ioutil.ReadAll(result.Body)
-	responsePayload := createMapResponse{}
+	responsePayload := CreateMapResponse{}
 	json.Unmarshal(res, &responsePayload)
 	return responsePayload
 }

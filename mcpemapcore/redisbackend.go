@@ -4,14 +4,13 @@ package mcpemapcore
 import (
 	"errors"
 	"fmt"
+	"github.com/garyburd/redigo/redis"
 	"log"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/garyburd/redigo/redis"
 )
 
 const (
@@ -58,7 +57,7 @@ func (r RedisBackend) CreateMap(user *User,
 
 	dir, _ := os.Getwd()
 	mapDir := path.Join(dir, "maps")
-	filePath := path.Join(mapDir, newMap.MapFilename)
+	filePath := path.Join(mapDir, newMap.MapFilename+".zip")
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		r.logger.Printf("FAILED Create map: file %v\n", newMap.MapFilename)
@@ -88,10 +87,12 @@ func (r RedisBackend) CreateMap(user *User,
 			r.logger.Printf("Create map: imagefile %v exists\n", iFn)
 		}
 
+		filename := fmt.Sprintf("%v%v", newMap.MapImageChecksums[i], path.Ext(newMap.MapImageFileNames[i]))
 		//Add the URI here
 		var mi MapImage = MapImage{}
-		mi.MapImageHash = newMap.MapImageFileNames[i]
+		mi.MapImageHash = newMap.MapChecksum
 		mi.MapImageUri = mi.MapImageHash
+		mi.MapImageFilename = filename
 
 		theNewMap.MapImageUriList[i] = &mi
 	}
@@ -498,7 +499,8 @@ func WriteImageUriListNoDownload(postId int, maps []*MapImage) error {
 		_, err = conn.Do("HMSET",
 			fmt.Sprintf("mapimage:%d", mapImageId),
 			"mapimageuri", actual.MapImageUri,
-			"mapimagehash", actual.MapImageHash)
+			"mapimagehash", actual.MapImageHash,
+			"mapimagefilename", actual.MapImageFilename)
 
 		if err != nil {
 			return err
@@ -516,7 +518,8 @@ func WriteImageUriList(postId int, mapList []interface{}) error {
 	var err error
 	for _, i := range mapList {
 		actual := i.(map[string]interface{})["MapImageUri"]
-		success, hash := DownloadContent(actual.(string), "mapimages", "", "jpeg")
+		success, hash := DownloadContent(actual.(string), "mapimages", "", path.Ext(actual.(string)))
+		filename := fmt.Sprintf("%v%v", hash, path.Ext(actual.(string)))
 		//		success := true
 		//		hash := ""
 		if success {
@@ -527,7 +530,8 @@ func WriteImageUriList(postId int, mapList []interface{}) error {
 			_, err = conn.Do("HMSET",
 				fmt.Sprintf("mapimage:%d", mapImageId),
 				"mapimageuri", actual,
-				"mapimagehash", hash)
+				"mapimagehash", hash,
+				"mapimagefilename", filename)
 
 			_, err = conn.Do("LPUSH", "mapimages:"+strconv.Itoa(postId), mapImageId)
 		}
@@ -623,6 +627,6 @@ func GetMapImageFromRedis(mapImageId string, siteRoot string) (*MapImage, error)
 	if len(siteRoot) >= 7 && strings.ToLower(siteRoot[:7]) != "http://" {
 		siteRoot = "http://" + siteRoot
 	}
-	u.MapImageUri = fmt.Sprintf("%v/mapimages/%v", siteRoot, u.MapImageHash)
+	u.MapImageUri = fmt.Sprintf("%v/mapimages/%v", siteRoot, u.MapImageFilename)
 	return u, nil
 }

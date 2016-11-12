@@ -64,7 +64,7 @@ func GetWriteMapsFromMySqlService() {
 		fmt.Printf("Map %v\n", count)
 		themap := maps[i]
 		fmt.Printf("downloaduri %v\n", themap.MapDownloadUri)
-		success, hash := mcpemapcore.DownloadContent(themap.MapDownloadUri, "maps", "application/zip", "zip")
+		success, hash := mcpemapcore.DownloadContent(themap.MapDownloadUri, "maps", "application/zip", ".zip")
 		if success {
 			fmt.Println("Valid:"+themap.MapDownloadUri, false, hash)
 			mcpemapcore.MySqlUpdateMapValid(themap, true, hash)
@@ -95,7 +95,7 @@ func GetWriteMapsFromService() {
 	for i := range list {
 		cool := list[i].(map[string]interface{})
 		name := cool["MapDownloadUri"].(string)
-		success, hash := mcpemapcore.DownloadContent(name, "maps", "application/zip", "zip")
+		success, hash := mcpemapcore.DownloadContent(name, "maps", "application/zip", ".zip")
 		if success {
 			mcpemapcore.WriteNextMap(cool, true, hash)
 		} else {

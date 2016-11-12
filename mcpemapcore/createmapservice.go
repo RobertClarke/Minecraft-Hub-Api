@@ -22,6 +22,7 @@ type NewMap struct {
 	MapFilename       string
 	MapChecksum       string
 	MapImageFileNames []string
+	MapImageChecksums []string
 }
 
 // NewCreateMapService creates new instance of service
@@ -48,6 +49,10 @@ type createMapService struct {
 func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, err error) {
 	if user == nil {
 		return "", errors.New("not authenticated, no user")
+	}
+
+	if user.Username == "" {
+		return "", errors.New("not authenticated, user has no username")
 	}
 
 	if len(newMap.MapImageFileNames) == 0 {
@@ -103,7 +108,6 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 	} else {
 		s.tracer.Println("Hashes match")
 	}
-	newMap.MapFilename = sh
 
 	// get md5 of mapname
 	// move map and rename
@@ -121,20 +125,27 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 		s.tracer.Println("Looking at file " + name)
 		md5Name := md5.Sum([]byte(name))
 		hash := fmt.Sprintf("%x", md5Name)
-		newMap.MapImageFileNames[i] = hash
-		err := os.Rename(path.Join(downloads, name), path.Join(mapImages, hash))
+		if len(newMap.MapImageChecksums) == 0 {
+			newMap.MapImageChecksums = make([]string, len(newMap.MapImageFileNames))
+		}
+		newMap.MapImageChecksums[i] = hash
+		filename := fmt.Sprintf("%v%v", hash, path.Ext(name))
+		err := os.Rename(path.Join(downloads, name), path.Join(mapImages, filename))
 		if err != nil {
 			return "", err
 		}
+		newMap.MapImageFileNames[i] = filename
 	}
 
 	s.tracer.Println("Done with images")
 
-	err = os.Rename(path.Join(downloads, newMap.MapFilename), path.Join(mapDir, newMap.MapChecksum))
+	err = os.Rename(path.Join(downloads, newMap.MapFilename), path.Join(mapDir, newMap.MapChecksum)+".zip")
 	if err != nil {
 		return "", err
 	}
 	s.tracer.Println("Done with map rename")
+
+	newMap.MapFilename = sh
 	// add to database
 	return s.myBackend.CreateMap(user, newMap)
 

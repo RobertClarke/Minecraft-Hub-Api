@@ -79,7 +79,7 @@ func GetMaps(wr http.ResponseWriter, r *http.Request) {
 	switch r.RequestURI {
 	case "/getmaplist":
 		fmt.Println("Request: All maps")
-		mapResponse.Maps, _, err = mcpemapcore.GetAllMaps(0, 12, r.Host)
+		mapResponse.Maps, _, err = mcpemapcore.GetAllMaps(0, 142, r.Host)
 		break
 	case "/getfeaturedmaplist":
 		fmt.Println("Request: featured maps")
