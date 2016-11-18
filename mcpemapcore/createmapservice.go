@@ -140,7 +140,9 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 
 	s.tracer.Println("Done with images")
 
-	err = os.Rename(path.Join(downloads, newMap.MapFilename), path.Join(mapDir, strings.ToLower(newMap.MapChecksum))+".zip")
+	newMap.MapChecksum = strings.ToLower(newMap.MapChecksum)
+
+	err = os.Rename(path.Join(downloads, newMap.MapFilename), path.Join(mapDir, newMap.MapChecksum)+".zip")
 	if err != nil {
 		return "", err
 	}
