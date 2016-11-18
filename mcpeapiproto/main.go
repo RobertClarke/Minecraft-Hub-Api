@@ -172,8 +172,6 @@ func Upload(w http.ResponseWriter, req *http.Request) {
 	if user != nil {
 
 		fmt.Printf("we have a user with name %v\n", user.Username)
-		filename, _ := GenUUID()
-		filename += ".zip"
 
 		if !mcpemapcore.Exists("uploads") {
 			err = os.Mkdir("uploads", 0777)
@@ -189,7 +187,10 @@ func Upload(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-		formFile, _, err := req.FormFile("TheFile")
+		formFile, formHeader, err := req.FormFile("TheFile")
+		ext := path.Ext(formHeader.Filename)
+		filename, _ := GenUUID()
+		filename += ext
 		if err != nil {
 			log.Fatal(err)
 		}
