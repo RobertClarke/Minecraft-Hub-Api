@@ -104,7 +104,7 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 	chkSum := md5.Sum(mapBytes)
 	sh := fmt.Sprintf("%x", chkSum)
 	if sh != newMap.MapChecksum {
-		return "", errors.New("checksum doesn't match")
+		return "", errors.New(fmt.Sprintf("checksum doesn't match: Calculated: %v Provided %v", sh, newMap.MapChecksum))
 	} else {
 		s.tracer.Println("Hashes match")
 	}
