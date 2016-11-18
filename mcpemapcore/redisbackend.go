@@ -57,7 +57,7 @@ func (r RedisBackend) CreateMap(user *User,
 
 	dir, _ := os.Getwd()
 	mapDir := path.Join(dir, "maps")
-	filePath := path.Join(mapDir, newMap.MapFilename)
+	filePath := path.Join(mapDir, newMap.MapFilename) + ".zip"
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		r.logger.Printf("FAILED Create map: file %v\n", newMap.MapFilename)
