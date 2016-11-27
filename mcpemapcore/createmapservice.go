@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 )
 
 // CreateMapService Service for creating maps from uploads
@@ -103,8 +104,8 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 	}
 	chkSum := md5.Sum(mapBytes)
 	sh := fmt.Sprintf("%x", chkSum)
-	if sh != newMap.MapChecksum {
-		return "", errors.New(fmt.Sprintf("checksum doesn't match calced:%v, sent:%v", sh, newMap.MapChecksum))
+	if sh != strings.ToLower(newMap.MapChecksum) {
+		return "", errors.New(fmt.Sprintf("checksum doesn't match: Calculated: %v Provided %v", sh, newMap.MapChecksum))
 	} else {
 		s.tracer.Println("Hashes match")
 	}
@@ -138,6 +139,8 @@ func (s createMapService) CreateMap(user *User, newMap *NewMap) (mapid string, e
 	}
 
 	s.tracer.Println("Done with images")
+
+	newMap.MapChecksum = strings.ToLower(newMap.MapChecksum)
 
 	err = os.Rename(path.Join(downloads, newMap.MapFilename), path.Join(mapDir, newMap.MapChecksum)+".zip")
 	if err != nil {
