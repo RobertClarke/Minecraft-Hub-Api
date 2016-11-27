@@ -103,7 +103,7 @@ func (r RedisBackend) CreateMap(user *User,
 		return "", err
 	}
 	err = writeMapFromMap(postId, &theNewMap, true)
-	return "", err
+	return string(postId), err
 }
 
 func sanitize(name string) string {
