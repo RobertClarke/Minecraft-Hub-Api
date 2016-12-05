@@ -112,7 +112,7 @@ func sanitize(name string) string {
 }
 
 func (r RedisBackend) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	return GetMapsFromRedis(start, count, siteRoot, "goodmapset", false)
+	return GetMapsFromRedis(start, count, siteRoot, "goodmapset", true)
 }
 
 func (r RedisBackend) GetFeaturedMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
