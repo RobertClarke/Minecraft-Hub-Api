@@ -80,7 +80,7 @@ func GetMaps(wr http.ResponseWriter, r *http.Request) {
 	switch r.RequestURI {
 	case "/getmaplist":
 		fmt.Println("Request: All maps")
-		mapResponse.Maps, _, err = mcpemapcore.GetAllMaps(0, 142, r.Host)
+		mapResponse.Maps, _, err = mcpemapcore.GetAllMaps(0, 20, r.Host)
 		break
 	case "/getfeaturedmaplist":
 		fmt.Println("Request: featured maps")
@@ -376,8 +376,8 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		fmt.Printf("Listening for HTTP on 80\n")
-		err = http.ListenAndServe(":80", mux)
+		fmt.Printf("Listening for HTTP on 8080\n")
+		err = http.ListenAndServe(":8080", mux)
 		if err != nil {
 			log.Fatal(err)
 		}
