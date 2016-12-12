@@ -327,6 +327,7 @@ func main() {
 	var err error
 	useSsl := flag.Bool("ssl", false, "enable SSL")
 	help := flag.Bool("?", false, "get help")
+	port := flag.Int("port", 80, "port to listen on")
 	flag.Parse()
 	if *help {
 		flag.Usage()
@@ -376,8 +377,11 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		fmt.Printf("Listening for HTTP on 80\n")
-		err = http.ListenAndServe(":80", mux)
+		var usePort int
+		usePort = *port
+		usePortStr := strconv.Itoa(usePort)
+		fmt.Printf("Listening for HTTP on %v\n", usePortStr)
+		err = http.ListenAndServe(":"+usePortStr, mux)
 		if err != nil {
 			log.Fatal(err)
 		}
