@@ -376,8 +376,8 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		fmt.Printf("Listening for HTTP on 8080\n")
-		err = http.ListenAndServe(":8080", mux)
+		fmt.Printf("Listening for HTTP on 80\n")
+		err = http.ListenAndServe(":80", mux)
 		if err != nil {
 			log.Fatal(err)
 		}
