@@ -14,6 +14,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"time"
 
 	"github.com/robertclarke/Minecraft-Hub-Api/mcpemapcore"
 	redisauth "github.com/robertclarke/Minecraft-Hub-Api/redisauthprovider"
@@ -136,8 +137,12 @@ func (h LogHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	wp := path.Ext(fn)
 	fnnp := fn[:len(fn)-len(wp)]
 	fmt.Printf("file:%v extension:%v\n", fnnp, wp)
-	downloadCounter.Add(1)
-	mcpemapcore.UpdateMapDownloadCount(fnnp)
+	if wp == ".zip" {
+		downloadCounter.Add(1)
+		mcpemapcore.UpdateMapDownloadCount(fnnp)
+	} else {
+		imagedownloadCounter.Add(1)
+	}
 	h.wrapper.ServeHTTP(rw, r)
 }
 
@@ -163,6 +168,12 @@ type errorObj struct {
 func HelloServer(w http.ResponseWriter, req *http.Request) {
 	fmt.Printf("hello world\n")
 	fmt.Fprintf(w, "hello, world!\n")
+}
+
+func SlowHelloServer(w http.ResponseWriter, req *http.Request) {
+	time.Sleep(time.Duration(200 * time.Millisecond))
+	fmt.Printf("slow hello world\n")
+	fmt.Fprintf(w, "slow hello, world!\n")
 }
 
 func Upload(w http.ResponseWriter, req *http.Request) {
@@ -219,6 +230,7 @@ func Upload(w http.ResponseWriter, req *http.Request) {
 
 		w.Write(buffer) //ignore errors
 		fmt.Printf("Upload complete: %v bytes\n", count)
+		uploadCounter.Add(1)
 	} else {
 		fmt.Printf("shit no user")
 		log.Fatal()
@@ -300,26 +312,35 @@ func configureTLS(hostname string) (net.Listener, *tls.Config) {
 }
 
 var (
-	downloadCounter = prometheus.NewCounter(prometheus.CounterOpts{Name: "mchub_mapdownloads", Help: "count of map downloads"})
-	apiCallCounter  = prometheus.NewCounter(prometheus.CounterOpts{Name: "mchub_apicalls", Help: "count of api calls"})
+	downloadCounter      = prometheus.NewCounter(prometheus.CounterOpts{Name: "mchub_mapdownloads", Help: "count of map downloads"})
+	imagedownloadCounter = prometheus.NewCounter(prometheus.CounterOpts{Name: "mchub_imagedownloads", Help: "count of image downloads"})
+	uploadCounter        = prometheus.NewCounter(prometheus.CounterOpts{Name: "mchub_uploads", Help: "count of all file uploads"})
+	apiCallCounter       = prometheus.NewCounter(prometheus.CounterOpts{Name: "mchub_apicalls", Help: "count of api calls"})
+	apilatency_ms        = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:    "mchub_latency_ms",
+		Help:    "request latency in miliseconds",
+		Buckets: prometheus.ExponentialBuckets(1, 2, 20),
+	})
 )
 
 func init() {
-	err := prometheus.Register(downloadCounter)
-	if err != nil {
-		log.Fatal("Failed to register download counter:" + err.Error())
-	}
-
-	err = prometheus.Register(apiCallCounter)
-	if err != nil {
-		log.Fatal("Failed to register apicall counter:" + err.Error())
-	}
+	prometheus.MustRegister(downloadCounter)
+	prometheus.MustRegister(imagedownloadCounter)
+	prometheus.MustRegister(uploadCounter)
+	prometheus.MustRegister(apiCallCounter)
+	prometheus.MustRegister(apilatency_ms)
 }
 
 func ApiCounter(fn http.HandlerFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		apiCallCounter.Add(1)
 		fn(rw, r)
+		defer func() {
+			l := time.Since(start)
+			ms := float64(l.Nanoseconds())
+			apilatency_ms.Observe(ms)
+		}()
 	}
 }
 
@@ -347,6 +368,7 @@ func main() {
 	redisauth.RegisterUserRegistrationHandler(mux)
 
 	mux.HandleFunc("/hello", ApiCounter(auth.CorsOptions(HelloServer)))
+	mux.HandleFunc("/helloslow", ApiCounter(auth.CorsOptions(SlowHelloServer)))
 	mux.HandleFunc("/getmaplist", ApiCounter(auth.CorsOptions(GetMaps)))
 	mux.HandleFunc("/getfeaturedmaplist", ApiCounter(auth.CorsOptions(GetMaps)))
 	mux.HandleFunc("/getmostdownloaded", ApiCounter(auth.CorsOptions(GetMaps)))
