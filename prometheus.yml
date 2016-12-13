@@ -11,7 +11,7 @@ global:
 
 # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
-  # - "first.rules"
+  - '/etc/prometheus/alert.rules'
   # - "second.rules"
 
 # A scrape configuration containing exactly one endpoint to scrape:
@@ -27,11 +27,11 @@ scrape_configs:
     # scheme defaults to 'http'.
 
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['127.0.0.1:9090']
 
   - job_name: 'mcpe'
     scrape_interval: 5s
 
     static_configs:
-      - targets: ['dev2.minecrafthub.com:80']
+      - targets: ['dev.objectivepixel.com:80']
 
