@@ -11,7 +11,7 @@ import (
 
 	jwtauth "github.com/clarkezone/jwtauth-go"
 	"github.com/dkumor/acmewrapper"
-	redisauth "github.com/robertclarke/Minecraft-Hub-Api/redisauthprovider"
+	mysqlauth "github.com/robertclarke/Minecraft-Hub-Api/mysqlauthprovider"
 )
 
 func main() {
@@ -24,7 +24,7 @@ func main() {
 
 	if *useSsl && *hostName == "" {
 		fmt.Println("SSL requires a hostname; please specify with -hostname")
-return
+		return
 	}
 
 	mux := http.NewServeMux()
@@ -33,10 +33,12 @@ return
 	registerMetrics(mux)
 
 	// Authentication
-	var provider = redisauth.RedisUserProvider{}
+	//var provider = redisauth.RedisUserProvider{}
+	var provider = mysqlauth.MysqlAuthProvider{}
 	auth := jwtauth.CreateApiSecurity(provider)
 	auth.RegisterLoginHandlerMux(mux)
-	redisauth.RegisterUserRegistrationHandler(mux)
+	//mysqlauth.RegisterUserRegistrationHandler(mux) <-- user registration needs hooking up to the real db
+	//redisauth.RegisterUserRegistrationHandler(mux)
 
 	// Service Handlers
 	registerHelloHandlers(mux, auth)
@@ -93,10 +95,10 @@ func runServer(hostName string, useSsl *bool, port *int, mux *http.ServeMux) {
 }
 
 func configureTLS(hostname string, port int) (net.Listener, *tls.Config) {
-log.Printf("ConfigureTLS for port %v", port)
+	log.Printf("ConfigureTLS for port %v", port)
 	w, err := acmewrapper.New(acmewrapper.Config{
 		Domains: []string{hostname},
-		Address: strconv.Itoa(port),
+		Address: ":" + strconv.Itoa(port),
 
 		TLSCertFile: hostname + ".crt",
 		TLSKeyFile:  hostname + ".key",
