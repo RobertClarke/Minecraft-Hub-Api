@@ -32,6 +32,13 @@ func main() {
 	// Metrics
 	registerMetrics(mux)
 
+	registerAPIHandler(mux)
+
+	// run server
+	runServer(*hostName, useSsl, port, mux)
+}
+
+func registerAPIHandler(mux *http.ServeMux) {
 	// Authentication
 	//var provider = redisauth.RedisUserProvider{}
 	var provider = mysqlauth.MysqlAuthProvider{}
@@ -42,9 +49,6 @@ func main() {
 
 	// Service Handlers
 	registerHelloHandlers(mux, auth)
-
-	// run server
-	runServer(*hostName, useSsl, port, mux)
 }
 
 func parseFlags() (*bool, *bool, *int, *string) {
