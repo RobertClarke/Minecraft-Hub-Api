@@ -24,6 +24,7 @@ func main() {
 
 	if *useSsl && *hostName == "" {
 		fmt.Println("SSL requires a hostname; please specify with -hostname")
+return
 	}
 
 	mux := http.NewServeMux()
@@ -66,7 +67,7 @@ func runServer(hostName string, useSsl *bool, port *int, mux *http.ServeMux) {
 		}
 
 		listener, tlsconfig := configureTLS(hostName, actualPort)
-		//fmt.Printf("Listening for TLS with cert for hostname %v port %v\n", config.Hostname, config.Port)
+		log.Printf("Listening for TLS with cert for hostname %v port %v\n", tlsconfig.Hostname, tlsconfig.Port)
 		server = &http.Server{
 			Addr:      ":" + strconv.Itoa(actualPort),
 			Handler:   mux,
@@ -82,10 +83,8 @@ func runServer(hostName string, useSsl *bool, port *int, mux *http.ServeMux) {
 		} else {
 			actualPort = *port
 		}
-		var usePort int
-		usePort = *port
-		usePortStr := strconv.Itoa(usePort)
-		fmt.Printf("Listening for HTTP on %v\n", usePortStr)
+		usePortStr := strconv.Itoa(actualPort)
+		log.Printf("Listening for HTTP on %v\n", usePortStr)
 		err = http.ListenAndServe(":"+usePortStr, mux)
 		if err != nil {
 			log.Fatal(err)
@@ -94,6 +93,7 @@ func runServer(hostName string, useSsl *bool, port *int, mux *http.ServeMux) {
 }
 
 func configureTLS(hostname string, port int) (net.Listener, *tls.Config) {
+log.Printf("ConfigureTLS for port %v", port)
 	w, err := acmewrapper.New(acmewrapper.Config{
 		Domains: []string{hostname},
 		Address: ":" + strconv.Itoa(port),
