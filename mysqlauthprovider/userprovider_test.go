@@ -6,6 +6,10 @@ import (
 	"testing"
 )
 
+func TestDBPing(t *testing.T) {
+	dbPing()
+}
+
 func TestLogin(t *testing.T) {
 	var provider MysqlAuthProvider
 

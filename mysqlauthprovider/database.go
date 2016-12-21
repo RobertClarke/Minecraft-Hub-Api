@@ -12,9 +12,15 @@ import (
 
 func login(un string, pw string) (funcerr error, userid string) {
 	//TODO: replace this with proper string insertion
-	rows, err := getRows("SELECT id, name, password FROM users where username='" + un + "'")
-	defer rows.Close()
+	rows, err := getRows("SELECT id, username, password FROM users where username='" + un + "'")
 
+	if err != nil {
+		return err, ""
+	}
+
+	if rows != nil {
+		defer rows.Close()
+	}
 	var (
 		id       int
 		name     string
@@ -48,9 +54,23 @@ func login(un string, pw string) (funcerr error, userid string) {
 	return nil, strconv.Itoa(id)
 }
 
+func dbPing() {
+	//prod
+	un := "clarkezone"
+	rows, err := getRows("SELECT id, display_name, password FROM users where username='" + un + "'")
+	if rows != nil {
+		defer rows.Close()
+	}
+	if err == nil {
+		fmt.Printf("no error")
+	} else {
+		fmt.Printf("error:%v", err.Error())
+	}
+}
+
 func getRoleListForUser(userid string) ([]int, error) {
 	var err error
-	rows, _ := getRows("select level from users where id = '" + userid + "'")
+	rows, _ := getRows("select role from users where id = '" + userid + "'")
 	defer rows.Close()
 
 	roles := make([]int, 0)
@@ -73,10 +93,11 @@ func getRows(sqlQuery string) (*sql.Rows, error) {
 	var err error
 	var db *sql.DB
 
-	db, err = sql.Open("mysql", `clarkezone:winBlue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2`)
+	db, err = sql.Open("mysql", `mchubapp:MDcwJjPlXXVWLoY0@tcp(45.59.121.18:3306)/mchub`)
 	defer db.Close()
 
 	if err != nil {
+		fmt.Printf("unable to connect to database\n")
 		return nil, err
 	}
 
