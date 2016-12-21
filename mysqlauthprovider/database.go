@@ -62,7 +62,7 @@ func dbPing() {
 		defer rows.Close()
 	}
 	if err == nil {
-		fmt.Printf("no error")
+		fmt.Printf("DBPring: no error\n")
 	} else {
 		fmt.Printf("error:%v", err.Error())
 	}
@@ -82,7 +82,7 @@ func getRoleListForUser(userid string) ([]int, error) {
 		fmt.Printf("level: %v", level)
 	}
 
-	if level == 9 {
+	if level == 2 {
 		roles = append(roles, 1)
 	}
 
