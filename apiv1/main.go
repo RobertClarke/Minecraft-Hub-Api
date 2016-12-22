@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	useSsl, help, port, hostName := parseFlags()
+	useSsl, help, port, hostName, ipAddress := parseFlags()
 
 	if *help {
 		flag.Usage()
@@ -35,7 +35,7 @@ func main() {
 	registerAPIHandler(mux)
 
 	// run server
-	runServer(*hostName, useSsl, port, mux)
+	runServer(*ipAddress, *hostName, useSsl, port, mux)
 }
 
 func registerAPIHandler(mux *http.ServeMux) {
@@ -51,16 +51,17 @@ func registerAPIHandler(mux *http.ServeMux) {
 	registerHelloHandlers(mux, auth)
 }
 
-func parseFlags() (*bool, *bool, *int, *string) {
+func parseFlags() (*bool, *bool, *int, *string, *string) {
 	useSsl := flag.Bool("ssl", false, "enable SSL")
 	host := flag.String("hostname", "", "hostname for SSL")
 	help := flag.Bool("?", false, "get help")
 	port := flag.Int("port", -1, "port to listen on")
+	ipaddress := flag.String("ip", "", "IP address to bind server to")
 	flag.Parse()
-	return useSsl, help, port, host
+	return useSsl, help, port, host, ipaddress
 }
 
-func runServer(hostName string, useSsl *bool, port *int, mux *http.ServeMux) {
+func runServer(ipAddress, hostName string, useSsl *bool, port *int, mux *http.ServeMux) {
 	var actualPort int
 	var err error
 	var server *http.Server
@@ -90,8 +91,9 @@ func runServer(hostName string, useSsl *bool, port *int, mux *http.ServeMux) {
 			actualPort = *port
 		}
 		usePortStr := strconv.Itoa(actualPort)
-		log.Printf("Listening for HTTP on %v\n", usePortStr)
-		err = http.ListenAndServe(":"+usePortStr, mux)
+		log.Printf("Listening for HTTP on %v %v\n", ipAddress, usePortStr)
+
+		err = http.ListenAndServe(ipAddress+":"+usePortStr, mux)
 		if err != nil {
 			log.Fatal(err)
 		}
