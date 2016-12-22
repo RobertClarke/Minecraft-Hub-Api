@@ -34,4 +34,3 @@ scrape_configs:
 
     static_configs:
       - targets: ['dev.objectivepixel.com:80']
-
