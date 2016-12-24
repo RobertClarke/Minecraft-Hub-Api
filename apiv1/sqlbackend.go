@@ -14,11 +14,16 @@ type MySqlBackend struct {
 }
 
 func (r MySqlBackend) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	sqlQuery := "select " + getMapFields() + `
-	from posts
-	order by modified desc
-	limit ?, ?`
-	maps, err := mySQLQueryMapsProduction(sqlQuery, siteRoot, start, count)
+	log.Printf("GetAllMaps start:%v count:%v", start, count)
+	sqlQuery := `SELECT id, title, downloads, likes, 
+	(select filename from post_images where post_id=posts.id limit 1) as image, 
+	(select meta_value from post_meta where post_id=posts.id and meta_key='download_link') as filename 
+	FROM posts where type="map" order by modified DESC
+	limit ? offset ?`
+
+	// SELECT id, title, downloads, likes, (select filename from post_images where post_id=posts.id limit 1) as image, (select meta_value from post_meta where post_id=posts.id and meta_key='download_link') as filename FROM `posts` where type="map" order by modified DESC limit 10 OFFSET 1
+	//maps, err := mySQLQueryMapsProduction(sqlQuery, siteRoot)
+	maps, err := mySQLQueryMapsProduction(sqlQuery, siteRoot, count, start)
 
 	return maps, -1, err
 }
@@ -32,14 +37,17 @@ func mySQLQueryMapsProduction(sqlQuery string, siteRoot string, args ...interfac
 	defer db.Close()
 
 	rows, err := getRowsParamFromConnection(db, sqlQuery, args...)
-
 	if err != nil {
 		log.Printf("error: %v\n", err.Error())
 		return nil, err
 	}
 	defer rows.Close()
 
-	items, err := scanMapsProd(db, rows, siteRoot)
+	items, err := scanMaps(rows, siteRoot)
+	if err != nil {
+		log.Printf("error during scan %v", err.Error())
+		return nil, err
+	}
 	log.Printf("found %v maps\n", len(items))
 	return items, err
 }
@@ -61,71 +69,47 @@ func scanMaps(rows *sql.Rows, siteRoot string) ([]*Map, error) {
 	var err error
 	items := make([]*Map, 0)
 
-	var title, description, dllink, imageList string
-	var mapfilehash []byte
-	var id, tested, downloads, featured, favorites int
+	var title, description string
+	var primaryimage, downloadlink sql.NullString
+	var id, downloads, favorites int
+	//SELECT id, title, downloads, likes,
+	//(select filename from post_images where post_id=posts.id limit 1) as image,
+	//(select meta_value from post_meta where post_id=posts.id and meta_key='download_link') as filename
+	//FROM posts where type="map" order by modified DESC
+	//limit ? OFFSET ?
 	for rows.Next() {
 		err = rows.Scan(
 			&id,
 			&title,
-			&description,
-			&dllink,
-			//originaluri
-			&mapfilehash,
-			//author
-			//authoruri
-			//numviews
-			&tested,
-			&featured,
 			&downloads,
-			//favoritecount
-			&imageList,
-			&favorites)
+			&favorites,
+			&primaryimage,
+			&downloadlink)
 		if err != nil {
-			fmt.Printf("error: %v\n", err.Error())
+			log.Printf("error: %v\n", err.Error())
 			return nil, err
 		}
 
 		newMap := &Map{Id: strconv.Itoa(id),
-			MapTitle:       title,
-			Description:    description,
-			MapDownloadUri: dllink,
-			MapFileHash:    string(mapfilehash),
-			DownloadCount:  int64(downloads),
-			FavoriteCount:  int64(favorites)}
+			MapTitle:      title,
+			Description:   description,
+			DownloadCount: int64(downloads),
+			FavoriteCount: int64(favorites)}
 
-		if newMap.MapFileHash != "" {
-			newMap.MapDownloadUri = fmt.Sprintf("%v/maps/%v.zip", siteRoot, string(mapfilehash))
+		if downloadlink.Valid {
+			newMap.MapDownloadUri = downloadlink.String
 		}
 
-		if tested == 1 {
-			newMap.Tested = true
-		} else {
-
-			newMap.Tested = false
-		}
-
-		if featured == 1 {
-			newMap.Featured = true
-		} else {
-
-			newMap.Featured = false
-		}
-
-		imagenames := strings.Split(imageList, ",")
-
-		for i := range imagenames {
+		if primaryimage.Valid {
 			mi := &MapImage{}
-			mi.MapImageUri = fmt.Sprintf("mcpehub.com/uploads/720x500/maps/%v", imagenames[i])
-			fmt.Printf("%v\n", mi.MapImageUri)
+			mi.MapImageUri = fmt.Sprintf("mcpehub.com/uploads/720x500/maps/%v", primaryimage.String)
 			newMap.MapImageUriList = append(newMap.MapImageUriList, mi)
-		}
 
-		items = append(items, newMap)
+			items = append(items, newMap)
+		}
 	}
 
 	return items, nil
-
 }
 
 func scanMapsProd(db *sql.DB, rows *sql.Rows, siteRoot string) ([]*Map, error) {
