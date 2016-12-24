@@ -22,7 +22,7 @@ func init() {
 	server = httptest.NewServer(mux) //Creating new server with the user handlers
 }
 
-func TestLogin(t *testing.T) {
+func TestHello(t *testing.T) {
 	res, err := http.Get(server.URL + "/hello")
 	if err != nil {
 		log.Fatal(err)

@@ -156,7 +156,32 @@ func getRowsParam(sqlQuery string, args ...interface{}) (*sql.Rows, error) {
 	}
 
 	return rows, nil
+}
 
+func getDBConnection() (db *sql.DB, err error) {
+	db, err = sql.Open("mysql", `clarkezone:winBlue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2?parseTime=true`)
+
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+func getRowsParamFromConnection(db *sql.DB, sqlQuery string, args ...interface{}) (*sql.Rows, error) {
+	var err error
+	stmt, err := db.Prepare(sqlQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(args...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func MySqlUpdateMapValid(theMap *Map, valid bool, uriHash string) {
