@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 type Map struct {
 	Id             string
 	MapTitle       string `redis:"map_title" db:"title"`
@@ -39,9 +41,9 @@ func NewGetMapService() GetMapService {
 }
 
 func (s getMapService) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	start := time.Now()
+	metricstart := time.Now()
 	defer func() {
-		l := time.Since(start)
+		l := time.Since(metricstart)
 		ms := float64(l.Nanoseconds() * 1000)
 		apibackendlatencyms.Observe(ms)
 	}()

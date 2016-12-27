@@ -15,10 +15,16 @@ import (
 )
 
 func main() {
+	verifyMaps := GetDatabaseUtilFlags()
 	useSsl, help, port, hostName, ipAddress := parseFlags()
 
 	if *help {
 		flag.Usage()
+		return
+	}
+
+	if *verifyMaps {
+		fmt.Println("Verify maps")
 		return
 	}
 
