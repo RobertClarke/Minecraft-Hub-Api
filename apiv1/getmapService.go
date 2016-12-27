@@ -39,6 +39,12 @@ func NewGetMapService() GetMapService {
 }
 
 func (s getMapService) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
+	start := time.Now()
+	defer func() {
+		l := time.Since(start)
+		ms := float64(l.Nanoseconds() * 1000)
+		apibackendlatencyms.Observe(ms)
+	}()
 	maps, next, err := s.myBackend.GetAllMaps(start, count, siteRoot)
 	//return GetMapsFromRedis(start, count, siteRoot, "goodmapset", false)
 	return maps, next, err

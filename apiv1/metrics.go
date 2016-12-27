@@ -17,6 +17,11 @@ var (
 		Help:    "request latency in miliseconds",
 		Buckets: prometheus.ExponentialBuckets(1, 2, 20),
 	})
+	apibackendlatencyms = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:    "mchub_backend_latency_ms",
+		Help:    "database backend latency in miliseconds",
+		Buckets: prometheus.ExponentialBuckets(1, 2, 20),
+	})
 )
 
 func registerMetrics(mux *http.ServeMux) {
@@ -29,6 +34,7 @@ func init() {
 	prometheus.MustRegister(uploadCounter)
 	prometheus.MustRegister(apiCallCounter)
 	prometheus.MustRegister(apilatencyms)
+	prometheus.MustRegister(apibackendlatencyms)
 }
 
 func apiCounter(fn http.HandlerFunc) http.HandlerFunc {
@@ -38,7 +44,7 @@ func apiCounter(fn http.HandlerFunc) http.HandlerFunc {
 		fn(rw, r)
 		defer func() {
 			l := time.Since(start)
-			ms := float64(l.Nanoseconds())
+			ms := float64(l.Nanoseconds() * 1000)
 			apilatencyms.Observe(ms)
 		}()
 	}
