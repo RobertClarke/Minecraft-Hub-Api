@@ -80,7 +80,7 @@ func runServer(ipAddress, hostName string, useSsl *bool, port *int, mux *http.Se
 			actualPort = *port
 		}
 
-		listener, tlsconfig := configureTLS(hostName, actualPort)
+		listener, tlsconfig := configureTLS(hostName, ipAddress, actualPort)
 		//log.Printf("Listening for TLS with cert for hostname %v port %v\n", tlsconfig.Hostname, tlsconfig.Port)
 		server = &http.Server{
 			Addr:      ":" + strconv.Itoa(actualPort),
@@ -107,11 +107,11 @@ func runServer(ipAddress, hostName string, useSsl *bool, port *int, mux *http.Se
 	}
 }
 
-func configureTLS(hostname string, port int) (net.Listener, *tls.Config) {
+func configureTLS(hostname string, ipAddress string, port int) (net.Listener, *tls.Config) {
 	log.Printf("ConfigureTLS for port %v", port)
 	w, err := acmewrapper.New(acmewrapper.Config{
 		Domains: []string{hostname},
-		Address: ":" + strconv.Itoa(port),
+		Address: ipAddress + ":" + strconv.Itoa(port),
 
 		TLSCertFile: hostname + ".crt",
 		TLSKeyFile:  hostname + ".key",
