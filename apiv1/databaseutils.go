@@ -17,7 +17,7 @@ func GetDatabaseUtilFlags() *bool {
 
 func TestAllMaps() {
 	service := CreateGetMapService()
-	maps, _, err := service.GetAllMaps(1, 200, "")
+	maps, _, err := service.GetAllMaps(1, 15000, "")
 	if err != nil {
 		panic(err)
 	}

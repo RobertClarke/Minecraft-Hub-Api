@@ -17,7 +17,7 @@ func (r MySqlBackend) GetAllMaps(start, count int64, siteRoot string) ([]*Map, i
 	log.Printf("GetAllMaps start:%v count:%v", start, count)
 	sqlQuery := `SELECT id, title, downloads, likes, 
 	(select filename from post_images where post_id=posts.id limit 1) as image, 
-	(select meta_value from post_meta where post_id=posts.id and meta_key='download_link') as filename 
+	(select meta_value from post_meta where post_id=posts.id and meta_key='download_link' limit 1) as filename 
 	FROM posts where type="map" order by submitted DESC
 	limit ? offset ?`
 
