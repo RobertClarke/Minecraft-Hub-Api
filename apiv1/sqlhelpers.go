@@ -6,11 +6,23 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+var (
+	dbConStr string
+)
+
+func init() {
+	//Production:
+	//dbConStr = `mchubapp:MDcwJjPlXXVWLoY0@tcp(45.59.121.18:3306)/mchub`
+
+	//dev
+	dbConStr = `mchubapp:lMEsOgmYkKoo9a5v@tcp(45.59.121.15:3306)/mchub`
+}
+
 func getRowsParam(sqlQuery string, args ...interface{}) (*sql.Rows, error) {
 	var err error
 	var db *sql.DB
 
-	db, err = sql.Open("mysql", `mchubapp:MDcwJjPlXXVWLoY0@tcp(45.59.121.18:3306)/mchub`)
+	db, err = sql.Open("mysql", dbConStr)
 	//db, err = sql.Open("mysql", `clarkezone:winBlue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2?parseTime=true`)
 	defer db.Close()
 
@@ -34,7 +46,7 @@ func getRowsParam(sqlQuery string, args ...interface{}) (*sql.Rows, error) {
 }
 
 func getDBConnection() (db *sql.DB, err error) {
-	db, err = sql.Open("mysql", `mchubapp:MDcwJjPlXXVWLoY0@tcp(45.59.121.18:3306)/mchub`)
+	db, err = sql.Open("mysql", dbConStr)
 	//db, err = sql.Open("mysql", `clarkezone:winBlue.,.,.,@tcp(45.59.121.13:3306)/minecrafthub_dev2?parseTime=true`)
 
 	if err != nil {
