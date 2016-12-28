@@ -34,7 +34,7 @@ type getMapService struct {
 	myBackend Backend
 }
 
-func NewGetMapService() GetMapService {
+func CreateGetMapService() GetMapService {
 	v := getMapService{}
 	v.myBackend = MySqlBackend{}
 	return v

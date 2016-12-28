@@ -26,7 +26,7 @@ func registerGetMapsHandlers(mux *http.ServeMux, auth *jwtauth.ApiSecurity) {
 
 func getMaps(wr http.ResponseWriter, r *http.Request) {
 
-	var mapService = NewGetMapService()
+	var mapService = CreateGetMapService()
 
 	var mapResponse MapListResponse
 	var err error

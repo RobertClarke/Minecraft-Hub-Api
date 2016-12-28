@@ -25,6 +25,7 @@ func main() {
 
 	if *verifyMaps {
 		fmt.Println("Verify maps")
+		TestAllMaps()
 		return
 	}
 
