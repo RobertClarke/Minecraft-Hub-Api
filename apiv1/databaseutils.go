@@ -17,25 +17,25 @@ func GetDatabaseUtilFlags() *bool {
 
 func TestAllMaps() {
 	service := CreateGetMapService()
-	maps, _, err := service.GetAllMaps(1, 10, "")
+	maps, _, err := service.GetAllMaps(1, 200, "")
 	if err != nil {
 		panic(err)
 	}
 	var count = 0
 	for i := range maps {
 		count++
-		fmt.Printf("Map %v\n", count)
 		themap := maps[i]
-		fmt.Printf("Title %v downloaduri %v\n", themap.MapTitle, themap.MapDownloadUri)
+		fmt.Printf("Map %v ID:%v ", count, themap.Id)
+		//fmt.Printf("Title %v downloaduri %v\n", themap.MapTitle, themap.MapDownloadUri)
 		success, hash := DownloadContent(themap.MapDownloadUri, "maps", "application/zip", ".zip")
 		if success {
-			fmt.Println("Valid:"+themap.MapDownloadUri, false, hash)
+			fmt.Printf("valid with hash %v URI %v\n", hash, themap.MapDownloadUri)
 			//		mcpemapcore.MySqlUpdateMapValid(themap, true, hash)
 			//		//mcpemapcore.WriteNextMap(cool, true, hash)
 		} else {
 			//		mcpemapcore.MySqlUpdateMapValid(themap, false, hash)
 			//		//mcpemapcore.WriteNextMap(cool, false, hash)
-			fmt.Println("Invalid:"+themap.MapDownloadUri, false, hash)
+			//fmt.Println("Invalid:"+themap.MapDownloadUri, false, hash)
 		}
 	}
 }
@@ -57,7 +57,7 @@ func DownloadContent(uri string, dir string, acceptMime string, ext string) (boo
 		filename := fmt.Sprintf("%x%v", fn, ext)
 		hash := fmt.Sprintf("%x", fn)
 		filepath := fmt.Sprintf("%v/%v", dir, filename)
-		fmt.Println(filepath)
+		//fmt.Println(filepath)
 		err = ioutil.WriteFile(filepath, bytes, os.FileMode(0777))
 
 		if err != nil {
