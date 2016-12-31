@@ -28,6 +28,7 @@ type MapImage struct {
 
 type GetMapService interface {
 	GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error)
+	EnsureDirectDL(postid int) error
 }
 
 type getMapService struct {
@@ -35,9 +36,7 @@ type getMapService struct {
 }
 
 func CreateGetMapService() GetMapService {
-	v := getMapService{}
-	v.myBackend = MySqlBackend{}
-	return v
+	return MySqlBackend{}
 }
 
 func (s getMapService) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {

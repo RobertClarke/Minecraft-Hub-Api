@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	verifyMaps := GetDatabaseUtilFlags()
+	verifyMaps := getDatabaseUtilFlags()
 	useSsl, help, port, hostName, ipAddress := parseFlags()
 
 	if *help {
@@ -25,7 +25,7 @@ func main() {
 
 	if *verifyMaps {
 		fmt.Println("Verify maps")
-		TestAllMaps()
+		testAllMaps()
 		return
 	}
 

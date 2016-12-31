@@ -8,16 +8,17 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
-func GetDatabaseUtilFlags() *bool {
+func getDatabaseUtilFlags() *bool {
 	sqlMapVerify := flag.Bool("sqlmapverify", false, "scan all maps in database and attempt to verify them all")
 	return sqlMapVerify
 }
 
-func TestAllMaps() {
+func testAllMaps() {
 	service := CreateGetMapService()
-	maps, _, err := service.GetAllMaps(1, 15000, "")
+	maps, _, err := service.GetAllMaps(0, 1, "")
 	if err != nil {
 		panic(err)
 	}
@@ -25,22 +26,17 @@ func TestAllMaps() {
 	for i := range maps {
 		count++
 		themap := maps[i]
-		fmt.Printf("Map %v ID:%v ", count, themap.Id)
-		//fmt.Printf("Title %v downloaduri %v\n", themap.MapTitle, themap.MapDownloadUri)
-		success, hash := DownloadContent(themap.MapDownloadUri, "maps", "application/zip", ".zip")
+		fmt.Printf("Map %v ID:%v Title:%v Result:", count, themap.Id, themap.MapTitle)
+		success, hash := downloadContent(themap.MapDownloadUri, "maps", "application/zip", ".zip")
 		if success {
 			fmt.Printf("valid with hash %v URI %v\n", hash, themap.MapDownloadUri)
-			//		mcpemapcore.MySqlUpdateMapValid(themap, true, hash)
-			//		//mcpemapcore.WriteNextMap(cool, true, hash)
-		} else {
-			//		mcpemapcore.MySqlUpdateMapValid(themap, false, hash)
-			//		//mcpemapcore.WriteNextMap(cool, false, hash)
-			//fmt.Println("Invalid:"+themap.MapDownloadUri, false, hash)
+			id, _ := strconv.Atoi(themap.Id)
+			service.EnsureDirectDL(id)
 		}
 	}
 }
 
-func DownloadContent(uri string, dir string, acceptMime string, ext string) (bool, string) {
+func downloadContent(uri string, dir string, acceptMime string, ext string) (bool, string) {
 	resp, err := http.Get(uri)
 	if err != nil {
 		log.Printf("bad uri:%v error:%v\n", uri, err.Error())

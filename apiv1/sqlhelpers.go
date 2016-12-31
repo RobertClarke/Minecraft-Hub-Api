@@ -72,6 +72,19 @@ func getRowsParamFromConnection(db *sql.DB, sqlQuery string, args ...interface{}
 	return rows, nil
 }
 
+func getResultParamFromConnection(db *sql.DB, sqlQuery string, args ...interface{}) (sql.Result, error) {
+	var err error
+	stmt, err := db.Prepare(sqlQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	result, err := stmt.Exec(args...)
+
+	return result, err
+}
+
 func executeGetRowsParamFromConnection(stmt *sql.Stmt, args ...interface{}) (*sql.Rows, error) {
 	var err error
 

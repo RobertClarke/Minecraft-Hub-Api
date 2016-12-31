@@ -28,6 +28,51 @@ func (r MySqlBackend) GetAllMaps(start, count int64, siteRoot string) ([]*Map, i
 	return maps, -1, err
 }
 
+func (r MySqlBackend) EnsureDirectDL(id int) (err error) {
+	log.Printf("EnsureDirectDL for %v\n", id)
+	return mySQLEnsureDirectDL(id)
+}
+
+func mySQLEnsureDirectDL(id int) error {
+	existsSQL := "select meta_value from post_meta WHERE meta_key = 'direct_dl' and post_id=?"
+	addSQL := "insert into post_meta(post_id ,meta_key, meta_value) values(?, 'DIRECT_DL', '1')"
+
+	db, err := getDBConnection()
+
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	result, err := getRowsParamFromConnection(db, existsSQL, id)
+
+	defer result.Close()
+
+	var metaValue int
+	var found bool
+
+	for result.Next() {
+		result.Scan(&metaValue)
+		found = true
+	}
+
+	if !found {
+		log.Printf("None found\n")
+		res, err := getResultParamFromConnection(db, addSQL, id)
+		log.Printf("Meta row add result %v\n", res)
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Printf("Found metavalue %d\n", metaValue)
+		//TODO: case where a row exists with value 0
+		//above is unlikely as this function will likely only be used
+		//when a new map is created
+	}
+
+	return nil
+}
+
 func mySQLQueryMapsProduction(sqlQuery string, siteRoot string, args ...interface{}) ([]*Map, error) {
 	db, err := getDBConnection()
 

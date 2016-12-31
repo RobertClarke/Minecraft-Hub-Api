@@ -3,7 +3,7 @@ package main
 import "testing"
 
 func TestGetAllMaps(t *testing.T) {
-	service := NewGetMapService()
+	service := CreateGetMapService()
 	maps, _, err := service.GetAllMaps(0, 20, "minecrafthub.com")
 
 	if err != nil {
