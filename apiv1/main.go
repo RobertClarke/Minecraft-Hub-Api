@@ -57,6 +57,7 @@ func registerAPIHandler(mux *http.ServeMux) {
 	// Service Handlers
 	registerHelloHandlers(mux, auth)
 	registerFileUploadHandlers(mux, auth)
+	registerGetMapsHandlers(mux, auth)
 }
 
 func parseFlags() (*bool, *bool, *int, *string, *string) {
