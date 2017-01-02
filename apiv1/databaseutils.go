@@ -30,8 +30,8 @@ func testAllMaps() {
 		success, hash := downloadContent(themap.MapDownloadUri, "maps", "application/zip", ".zip")
 		if success {
 			fmt.Printf("valid with hash %v URI %v\n", hash, themap.MapDownloadUri)
-			id, _ := strconv.Atoi(themap.Id)
-			service.EnsureDirectDL(id)
+			//id, _ := strconv.Atoi(themap.Id) //comment this out for now
+			//service.EnsureDirectDL(id) //comment this out for now
 		}
 	}
 }

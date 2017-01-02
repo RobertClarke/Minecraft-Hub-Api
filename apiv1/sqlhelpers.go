@@ -12,10 +12,10 @@ var (
 
 func init() {
 	//Production:
-	//dbConStr = `mchubapp:MDcwJjPlXXVWLoY0@tcp(45.59.121.18:3306)/mchub`
+	dbConStr = `mchubapp:MDcwJjPlXXVWLoY0@tcp(45.59.121.18:3306)/mchub`
 
 	//dev
-	dbConStr = `mchubapp:lMEsOgmYkKoo9a5v@tcp(45.59.121.15:3306)/mchub`
+	//dbConStr = `mchubapp:lMEsOgmYkKoo9a5v@tcp(45.59.121.15:3306)/mchub`
 }
 
 func getRowsParam(sqlQuery string, args ...interface{}) (*sql.Rows, error) {
