@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 )
 
 func getDatabaseUtilFlags() *bool {
