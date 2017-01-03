@@ -33,6 +33,69 @@ func (r MySqlBackend) EnsureDirectDL(id int) (err error) {
 	return mySQLEnsureDirectDL(id)
 }
 
+func (r MySqlBackend) LoadUserInfo(userid string) (*User, error) {
+
+	fmt.Printf("userid:%v\n", userid)
+	return mySQLGetUserInfo(userid)
+}
+
+func mySQLGetUserInfo(userid string) (*User, error) {
+	var err error
+	fmt.Printf("mysqlgetuserinfo\n")
+	sqlQuery := `select id, username 
+	from users
+	where id=?`
+	us, err := mySQLQueryUsers(sqlQuery, userid)
+	if err != nil {
+		return nil, err
+	}
+	if len(us) == 1 {
+		return us[0], err
+	} else {
+		fmt.Printf("user not found")
+		return nil, err
+	}
+}
+
+func mySQLQueryUsers(sqlQuery string, args ...interface{}) ([]*User, error) {
+	rows, err := getRowsParam(sqlQuery, args...)
+	if err != nil {
+		fmt.Printf("error: %v\n", err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+
+	items, err := scanUsers(rows)
+	fmt.Printf("found %v users\n", len(items))
+	return items, err
+}
+
+func scanUsers(rows *sql.Rows) ([]*User, error) {
+	var err error
+	items := make([]*User, 0)
+
+	var username string
+	var id int
+	for rows.Next() {
+		err = rows.Scan(
+			&id,
+			&username)
+		if err != nil {
+			fmt.Printf("error: %v\n", err.Error())
+			return nil, err
+		}
+
+		newMap := &User{ID: strconv.Itoa(id),
+			Username: username,
+		}
+
+		items = append(items, newMap)
+	}
+
+	return items, nil
+
+}
+
 func mySQLEnsureDirectDL(id int) error {
 	existsSQL := "select meta_value from post_meta WHERE meta_key = 'direct_dl' and post_id=?"
 	addSQL := "insert into post_meta(post_id ,meta_key, meta_value) values(?, 'DIRECT_DL', '1')"

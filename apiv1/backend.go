@@ -8,7 +8,7 @@ type Backend interface {
 
 	//	UpdateFavoriteMap(u *User, mapId string, fav bool) error
 
-	//	LoadUserInfo(userId string) (*User, error)
+	LoadUserInfo(userID string) (*User, error)
 
 	//	UpdateMap(user *User, mapid int, uploadFilename string, hash string)
 
