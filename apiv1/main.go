@@ -45,7 +45,12 @@ func main() {
 	runServer(*ipAddress, *hostName, useSsl, port, mux)
 }
 
-func registerAPIHandler(mux *http.ServeMux) {
+func init() {
+	// Ensure upload directory created to ensure verification of permisions early
+	_ = CreateFileService()
+}
+
+func registerAPIHandler(mux *http.ServeMux) *jwtauth.ApiSecurity {
 	// Authentication
 	//var provider = redisauth.RedisUserProvider{}
 	var provider = mysqlauth.MysqlAuthProvider{}
@@ -58,6 +63,7 @@ func registerAPIHandler(mux *http.ServeMux) {
 	registerHelloHandlers(mux, auth)
 	registerFileUploadHandlers(mux, auth)
 	registerGetMapsHandlers(mux, auth)
+	return auth
 }
 
 func parseFlags() (*bool, *bool, *int, *string, *string) {

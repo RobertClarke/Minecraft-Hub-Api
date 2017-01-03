@@ -45,6 +45,8 @@ func (f productionFileService) ensureUploadRootExists() error {
 	if !exists(f.apiUploadRoot) {
 		err := os.Mkdir(f.apiUploadRoot, 0777)
 		if err != nil {
+			//if running test do this: sudo -E bash
+			//bash-3.2# go test -run FileUpload -v
 			log.Fatal(err)
 		}
 	}
