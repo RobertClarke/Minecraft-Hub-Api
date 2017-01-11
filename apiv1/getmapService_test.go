@@ -28,6 +28,6 @@ func TestMapFields(t *testing.T) {
 	}
 
 	for _, r := range maps {
-		log.Printf("id %v download uri %v imageuri %v", r.Id, r.MapDownloadUri, r.MapImageUriList[0].MapImageUri)
+		log.Printf("id %v download uri %v imageuri %v", r.ID, r.MapDownloadURI, r.MapImageURIList[0].MapImageURI)
 	}
 }

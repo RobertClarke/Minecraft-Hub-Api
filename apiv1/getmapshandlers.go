@@ -9,6 +9,7 @@ import (
 	jwtauth "github.com/clarkezone/jwtauth-go"
 )
 
+//MapListResponse represents the wireformat for map responses
 type MapListResponse struct {
 	Maps []*Map
 }

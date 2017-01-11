@@ -198,20 +198,20 @@ func scanMaps(rows *sql.Rows, siteRoot string) ([]*Map, error) {
 			return nil, err
 		}
 
-		newMap := &Map{Id: strconv.Itoa(id),
+		newMap := &Map{ID: strconv.Itoa(id),
 			MapTitle:      title,
 			Description:   description,
 			DownloadCount: int64(downloads),
 			FavoriteCount: int64(favorites)}
 
 		if downloadlink.Valid {
-			newMap.MapDownloadUri = downloadlink.String
+			newMap.MapDownloadURI = downloadlink.String
 		}
 
 		if primaryimage.Valid {
 			mi := &MapImage{}
-			mi.MapImageUri = fmt.Sprintf("mcpehub.com/uploads/720x500/maps/%v", primaryimage.String)
-			newMap.MapImageUriList = append(newMap.MapImageUriList, mi)
+			mi.MapImageURI = fmt.Sprintf("mcpehub.com/uploads/720x500/maps/%v", primaryimage.String)
+			newMap.MapImageURIList = append(newMap.MapImageURIList, mi)
 
 			items = append(items, newMap)
 		}
@@ -246,10 +246,10 @@ func scanMapsProd(db *sql.DB, rows *sql.Rows, siteRoot string) ([]*Map, error) {
 			return nil, err
 		}
 
-		newMap := &Map{Id: strconv.Itoa(id),
+		newMap := &Map{ID: strconv.Itoa(id),
 			MapTitle:       title,
 			Description:    description,
-			MapDownloadUri: dllink,
+			MapDownloadURI: dllink,
 			MapFileHash:    string(mapfilehash),
 			DownloadCount:  int64(downloads),
 			FavoriteCount:  int64(favorites)}
@@ -269,9 +269,9 @@ func scanMapsProd(db *sql.DB, rows *sql.Rows, siteRoot string) ([]*Map, error) {
 
 		for i := range imagenames {
 			mi := &MapImage{}
-			mi.MapImageUri = fmt.Sprintf("mcpehub.com/uploads/720x500/maps/%v", imagenames[i])
-			log.Printf("%v\n", mi.MapImageUri)
-			newMap.MapImageUriList = append(newMap.MapImageUriList, mi)
+			mi.MapImageURI = fmt.Sprintf("mcpehub.com/uploads/720x500/maps/%v", imagenames[i])
+			log.Printf("%v\n", mi.MapImageURI)
+			newMap.MapImageURIList = append(newMap.MapImageURIList, mi)
 		}
 
 		items = append(items, newMap)

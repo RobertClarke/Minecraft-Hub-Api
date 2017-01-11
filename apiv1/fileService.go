@@ -9,6 +9,7 @@ import (
 	"path"
 )
 
+// FileService abstracts file handling
 type FileService interface {
 	CreateUploadFileForUser(u *User, ext string) (f *os.File, fn string, e error)
 }

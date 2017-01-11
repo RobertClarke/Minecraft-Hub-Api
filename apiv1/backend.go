@@ -1,5 +1,6 @@
 package main
 
+// Backend interface for abstracting different backend implementations
 type Backend interface {
 	//	CreateMap(user *User,
 	//		newMap *NewMap) (string, error)

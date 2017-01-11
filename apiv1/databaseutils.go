@@ -25,10 +25,10 @@ func testAllMaps() {
 	for i := range maps {
 		count++
 		themap := maps[i]
-		fmt.Printf("Map %v ID:%v Title:%v Result:", count, themap.Id, themap.MapTitle)
-		success, hash := downloadContent(themap.MapDownloadUri, "maps", "application/zip", ".zip")
+		fmt.Printf("Map %v ID:%v Title:%v Result:", count, themap.ID, themap.MapTitle)
+		success, hash := downloadContent(themap.MapDownloadURI, "maps", "application/zip", ".zip")
 		if success {
-			fmt.Printf("valid with hash %v URI %v\n", hash, themap.MapDownloadUri)
+			fmt.Printf("valid with hash %v URI %v\n", hash, themap.MapDownloadURI)
 			//id, _ := strconv.Atoi(themap.Id) //comment this out for now
 			//service.EnsureDirectDL(id) //comment this out for now
 		}
@@ -59,8 +59,7 @@ func downloadContent(uri string, dir string, acceptMime string, ext string) (boo
 			log.Fatal(err)
 		}
 		return true, hash
-	} else {
-		fmt.Printf("Bad MimeType:%v\n", headerType)
 	}
+	fmt.Printf("Bad MimeType:%v\n", headerType)
 	return false, ""
 }
