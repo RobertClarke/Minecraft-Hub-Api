@@ -18,7 +18,7 @@ import (
 var (
 	server   *httptest.Server
 	reader   io.Reader //Ignore this for now
-	usersUrl string
+	usersURL string
 )
 
 func init() {

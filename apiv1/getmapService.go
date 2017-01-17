@@ -40,7 +40,7 @@ type getMapService struct {
 
 // CreateGetMapService returns a new mapservice
 func CreateGetMapService() GetMapService {
-	return MySqlBackend{}
+	return mySQLBackend{}
 }
 
 func (s getMapService) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {

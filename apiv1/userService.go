@@ -22,7 +22,7 @@ type userService struct {
 // CreateGetUserService gets a new instance of the UserService
 func CreateGetUserService() UserService {
 	service := userService{}
-	service.currentBackend = MySqlBackend{}
+	service.currentBackend = mySQLBackend{}
 	return service
 }
 

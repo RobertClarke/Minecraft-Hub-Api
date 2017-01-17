@@ -10,16 +10,28 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-type MySqlBackend struct {
+type mySQLBackend struct {
 }
 
-func (r MySqlBackend) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
+func (r mySQLBackend) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
 	log.Printf("GetAllMaps start:%v count:%v", start, count)
-	sqlQuery := `SELECT id, title, downloads, likes, 
-	(select filename from post_images where post_id=posts.id limit 1) as image, 
-	(select meta_value from post_meta where post_id=posts.id and meta_key='download_link' and not(meta_value='') limit 1) as filename 
-	FROM posts where type="map" order by submitted DESC
-	limit ? offset ?`
+	//	sqlQuery := `SELECT id, title, downloads, likes,
+	//	(select filename from post_images where post_id=posts.id limit 1) as image,
+	//	(select meta_value from post_meta where post_id=posts.id and meta_key='download_link' and not(meta_value='') limit 1) as filename
+	//	FROM posts where type="map" order by submitted DESC
+	//	limit ? offset ?`
+
+	sqlQuery := `SELECT
+p.id, p.title, p.content, p.downloads, p.likes,
+fi.filename AS featured_image, GROUP_CONCAT(images.filename) AS images,
+pdl.meta_value AS dl_link_join
+FROM posts p
+LEFT JOIN post_images fi ON (fi.id = featured_image_id AND fi.status = 1)
+LEFT JOIN post_images images ON (images.post_id = p.id AND images.status = 1)
+LEFT JOIN post_meta pdl ON (pdl.post_id = p.id AND pdl.meta_key = "download_link")
+WHERE p.type = 'map' AND p.platform = 'pe' AND p.status = 'published' AND pdl.meta_value LIKE 'http://minecrafthub.com/uploads/maps%'
+GROUP BY p.id ORDER BY submitted DESC
+limit ? offset ?`
 
 	// SELECT id, title, downloads, likes, (select filename from post_images where post_id=posts.id limit 1) as image, (select meta_value from post_meta where post_id=posts.id and meta_key='download_link') as filename FROM `posts` where type="map" order by modified DESC limit 10 OFFSET 1
 	//maps, err := mySQLQueryMapsProduction(sqlQuery, siteRoot)
@@ -28,12 +40,12 @@ func (r MySqlBackend) GetAllMaps(start, count int64, siteRoot string) ([]*Map, i
 	return maps, -1, err
 }
 
-func (r MySqlBackend) EnsureDirectDL(id int) (err error) {
+func (r mySQLBackend) EnsureDirectDL(id int) (err error) {
 	log.Printf("EnsureDirectDL for %v\n", id)
 	return mySQLEnsureDirectDL(id)
 }
 
-func (r MySqlBackend) LoadUserInfo(userid string) (*User, error) {
+func (r mySQLBackend) LoadUserInfo(userid string) (*User, error) {
 
 	fmt.Printf("userid:%v\n", userid)
 	return mySQLGetUserInfo(userid)
@@ -51,10 +63,10 @@ func mySQLGetUserInfo(userid string) (*User, error) {
 	}
 	if len(us) == 1 {
 		return us[0], err
-	} else {
-		fmt.Printf("user not found")
-		return nil, err
 	}
+
+	fmt.Printf("user not found")
+	return nil, err
 }
 
 func mySQLQueryUsers(sqlQuery string, args ...interface{}) ([]*User, error) {
@@ -177,7 +189,7 @@ func scanMaps(rows *sql.Rows, siteRoot string) ([]*Map, error) {
 	var err error
 	items := make([]*Map, 0)
 
-	var title, description string
+	var title, description, downloadlinks string
 	var primaryimage, downloadlink sql.NullString
 	var id, downloads, favorites int
 	//SELECT id, title, downloads, likes,
@@ -189,9 +201,11 @@ func scanMaps(rows *sql.Rows, siteRoot string) ([]*Map, error) {
 		err = rows.Scan(
 			&id,
 			&title,
+			&description,
 			&downloads,
 			&favorites,
 			&primaryimage,
+			&downloadlinks,
 			&downloadlink)
 		if err != nil {
 			log.Printf("error: %v\n", err.Error())
