@@ -21,7 +21,7 @@ func TestGetAllMaps(t *testing.T) {
 func TestMapFields(t *testing.T) {
 	log.Printf("TestMapFields\n")
 	service := CreateGetMapService()
-	maps, _, err := service.GetAllMaps(0, 20, "minecrafthub.com")
+	maps, _, err := service.GetAllMaps(0, 1, "minecrafthub.com")
 
 	if err != nil {
 		t.Error(err)

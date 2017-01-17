@@ -224,7 +224,7 @@ func scanMaps(rows *sql.Rows, siteRoot string) ([]*Map, error) {
 
 		if primaryimage.Valid {
 			mi := &MapImage{}
-			mi.MapImageURI = fmt.Sprintf("mcpehub.com/uploads/720x500/maps/%v", primaryimage.String)
+			mi.MapImageURI = fmt.Sprintf("http://minecrafthub.com/uploads/screenshots/%v", primaryimage.String)
 			newMap.MapImageURIList = append(newMap.MapImageURIList, mi)
 
 			items = append(items, newMap)
