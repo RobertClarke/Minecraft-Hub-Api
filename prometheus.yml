@@ -33,4 +33,4 @@ scrape_configs:
     scrape_interval: 5s
 
     static_configs:
-      - targets: ['dev.objectivepixel.com:80']
+      - targets: ['api.minecrafthub.com:80']
