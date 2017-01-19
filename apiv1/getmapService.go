@@ -30,7 +30,7 @@ type MapImage struct {
 
 // GetMapService interface
 type GetMapService interface {
-	GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error)
+	GetAllMapsQuery(start, count int64, siteRoot string, query string) ([]*Map, int64, error)
 	EnsureDirectDL(postid int) error
 }
 
@@ -43,14 +43,13 @@ func CreateGetMapService() GetMapService {
 	return mySQLBackend{}
 }
 
-func (s getMapService) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
+func (s getMapService) GetAllMapsQuery(start, count int64, siteRoot string, query string) ([]*Map, int64, error) {
 	metricstart := time.Now()
 	defer func() {
 		l := time.Since(metricstart)
 		ms := float64(l.Nanoseconds() * 1000)
 		apibackendlatencyms.Observe(ms)
 	}()
-	maps, next, err := s.myBackend.GetAllMaps(start, count, siteRoot)
-	//return GetMapsFromRedis(start, count, siteRoot, "goodmapset", false)
+	maps, next, err := s.myBackend.GetAllMapsQuery(start, count, siteRoot, query)
 	return maps, next, err
 }

@@ -2,12 +2,18 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 
 	jwtauth "github.com/clarkezone/jwtauth-go"
 )
+
+type MapListRequest struct {
+	QueryName string
+	Skip      int64
+	Take      int64
+}
 
 //MapListResponse represents the wireformat for map responses
 type MapListResponse struct {
@@ -19,52 +25,28 @@ type errorObj struct {
 }
 
 func registerGetMapsHandlers(mux *http.ServeMux, auth *jwtauth.ApiSecurity) {
-	mux.HandleFunc("/getmaplist", apiCounter(auth.CorsOptions(getMaps)))
-	mux.HandleFunc("/getfeaturedmaplist", apiCounter(auth.CorsOptions(getMaps)))
-	mux.HandleFunc("/getmostdownloaded", apiCounter(auth.CorsOptions(getMaps)))
-	mux.HandleFunc("/getmostfavorited", apiCounter(auth.CorsOptions(getMaps)))
+	mux.HandleFunc("/getmapsquery", apiCounter(auth.CorsOptions(getMapsArgs)))
 }
 
-func getMaps(wr http.ResponseWriter, r *http.Request) {
-
+func getMapsArgs(wr http.ResponseWriter, r *http.Request) {
+	var b MapListRequest
 	var mapService = CreateGetMapService()
-
 	var mapResponse MapListResponse
 	var err error
-	//fmt.Printf("Request:%+v", r)
-	switch r.RequestURI {
-	case "/getmaplist":
-		fmt.Println("Request: All maps")
-		mapResponse.Maps, _, err = mapService.GetAllMaps(0, 20, r.Host)
-		break
-	case "/getfeaturedmaplist":
-		fmt.Println("Request: featured maps")
-		//mapResponse.Maps, _, err = mcpemapcore.GetFeaturedMaps(0, 8, r.Host)
-		break
-	case "/getmostdownloaded":
-		fmt.Println("Request: most downloaded")
-		//mapResponse.Maps, _, err = mcpemapcore.GetMostDownloadedMaps(0, 8, r.Host)
-		break
-	case "/getmostfavorited":
-		fmt.Println("Request: most favorited")
-		//mapResponse.Maps, _, err = mcpemapcore.GetMostFavoritedMaps(0, 8, r.Host)
-		break
-	case "/getuserfavorites":
-		//user := GetUser(wr, r)
-		//fmt.Printf("Request: user favorites for user %v\n", user.Id)
-		//mapResponse.Maps, err = mcpemapcore.GetFavoriteMaps(user, 0, 8, r.Host)
-		break
-	}
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+
 	if hasFailed(wr, err) {
 		return
 	}
-	bytes, err := json.Marshal(mapResponse)
-	if err == nil {
-		wr.Header().Set("Content-Type", "application/json")
-		wr.Write(bytes)
-	} else {
-		log.Fatal(err)
+	err = json.Unmarshal(bodyBytes, &b)
+
+	if hasFailed(wr, err) {
+		log.Printf("Failed to unmarshall" + err.Error())
+		return
 	}
+
+	mapResponse.Maps, _, err = mapService.GetAllMapsQuery(b.Skip, b.Take, r.Host, b.QueryName)
 }
 
 func hasFailed(wr http.ResponseWriter, err error) bool {

@@ -13,13 +13,25 @@ import (
 type mySQLBackend struct {
 }
 
-func (r mySQLBackend) GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error) {
-	log.Printf("GetAllMaps start:%v count:%v", start, count)
-	//	sqlQuery := `SELECT id, title, downloads, likes,
-	//	(select filename from post_images where post_id=posts.id limit 1) as image,
-	//	(select meta_value from post_meta where post_id=posts.id and meta_key='download_link' and not(meta_value='') limit 1) as filename
-	//	FROM posts where type="map" order by submitted DESC
-	//	limit ? offset ?`
+func (r mySQLBackend) GetAllMapsQuery(start, count int64, siteRoot string, query string) ([]*Map, int64, error) {
+	log.Printf("GetMaps start:%v count:%v\n", start, count)
+
+	whereClause := ""
+
+	switch query {
+	case "featured":
+		log.Printf("featuered\n")
+		whereClause = "and homepage_featured=1"
+		break
+	case "survival":
+		log.Printf("survival\n")
+		whereClause = "and category=6"
+		break
+	case "creative":
+		log.Printf("creative\n")
+		whereClause = "and category=7"
+		break
+	}
 
 	sqlQuery := `SELECT
 p.id, p.title, p.content, p.downloads, p.likes,
@@ -29,12 +41,11 @@ FROM posts p
 LEFT JOIN post_images fi ON (fi.id = featured_image_id AND fi.status = 1)
 LEFT JOIN post_images images ON (images.post_id = p.id AND images.status = 1)
 LEFT JOIN post_meta pdl ON (pdl.post_id = p.id AND pdl.meta_key = "download_link")
-WHERE p.type = 'map' AND p.platform = 'pe' AND p.status = 'published' AND pdl.meta_value LIKE 'http://minecrafthub.com/uploads/maps%'
-GROUP BY p.id ORDER BY submitted DESC
+WHERE p.type = 'map' AND p.platform = 'pe' AND p.status = 'published' AND pdl.meta_value LIKE 'http://minecrafthub.com/uploads/maps%' ` +
+		whereClause +
+		` GROUP BY p.id ORDER BY submitted DESC
 limit ? offset ?`
 
-	// SELECT id, title, downloads, likes, (select filename from post_images where post_id=posts.id limit 1) as image, (select meta_value from post_meta where post_id=posts.id and meta_key='download_link') as filename FROM `posts` where type="map" order by modified DESC limit 10 OFFSET 1
-	//maps, err := mySQLQueryMapsProduction(sqlQuery, siteRoot)
 	maps, err := mySQLQueryMapsProduction(sqlQuery, siteRoot, count, start)
 
 	return maps, -1, err

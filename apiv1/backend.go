@@ -13,7 +13,9 @@ type Backend interface {
 
 	//	UpdateMap(user *User, mapid int, uploadFilename string, hash string)
 
-	GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error)
+	//GetAllMaps(start, count int64, siteRoot string) ([]*Map, int64, error)
+
+	GetAllMapsQuery(start, count int64, siteRoot string, query string) ([]*Map, int64, error)
 
 	EnsureDirectDL(id int) error
 
