@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -47,6 +48,40 @@ func TestHello(t *testing.T) {
 
 	if string(greeting) != "hello, world!\n" {
 		log.Fatal("Wrong response")
+	}
+}
+
+func TestGetMapsFilter(t *testing.T) {
+	payload := MapListRequest{}
+	payload.QueryName = "c:7"
+	payload.Skip = 0
+	payload.Take = 20
+	byt, err := json.Marshal(payload)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	res, err := http.Post(server.URL+"/getmapsquery", "application/json", bytes.NewReader(byt))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	greeting, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	response := MapListResponse{}
+	err = json.Unmarshal(greeting, &response)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("JSON Response contains %v items", len(response.Maps))
+	if len(response.Maps) == 0 {
+		log.Fatal("test failed; no maps")
 	}
 }
 

@@ -47,6 +47,13 @@ func getMapsArgs(wr http.ResponseWriter, r *http.Request) {
 	}
 
 	mapResponse.Maps, _, err = mapService.GetAllMapsQuery(b.Skip, b.Take, r.Host, b.QueryName)
+	bytes, err := json.Marshal(mapResponse)
+	if err == nil {
+		wr.Header().Set("Content-Type", "application/json")
+		wr.Write(bytes)
+	} else {
+		log.Fatal(err)
+	}
 }
 
 func hasFailed(wr http.ResponseWriter, err error) bool {
