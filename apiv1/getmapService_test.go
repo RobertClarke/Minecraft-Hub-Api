@@ -33,7 +33,7 @@ func TestGetFeatuerdMaps(t *testing.T) {
 
 func TestGetSurvivalMaps(t *testing.T) {
 	service := CreateGetMapService()
-	maps, _, err := service.GetAllMapsQuery(0, 20, "minecrafthub.com", "survival")
+	maps, _, err := service.GetAllMapsQuery(0, 20, "minecrafthub.com", "c:6")
 
 	if err != nil {
 		t.Error(err)
@@ -46,7 +46,20 @@ func TestGetSurvivalMaps(t *testing.T) {
 
 func TestGetCreativeMaps(t *testing.T) {
 	service := CreateGetMapService()
-	maps, _, err := service.GetAllMapsQuery(0, 20, "minecrafthub.com", "creative")
+	maps, _, err := service.GetAllMapsQuery(0, 20, "minecrafthub.com", "c:7")
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(maps) == 0 {
+		t.Fatal("no maps found")
+	}
+}
+
+func TestGetMostDownloadedMaps(t *testing.T) {
+	service := CreateGetMapService()
+	maps, _, err := service.GetAllMapsQuery(0, 20, "minecrafthub.com", "mostdownloaded")
 
 	if err != nil {
 		t.Error(err)

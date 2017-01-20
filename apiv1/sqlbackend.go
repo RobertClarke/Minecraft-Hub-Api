@@ -17,20 +17,29 @@ func (r mySQLBackend) GetAllMapsQuery(start, count int64, siteRoot string, query
 	log.Printf("GetMaps start:%v count:%v\n", start, count)
 
 	whereClause := ""
+	orderClause := "submitted DESC"
 
-	switch query {
-	case "featured":
-		log.Printf("featuered\n")
-		whereClause = "and homepage_featured=1"
-		break
-	case "survival":
-		log.Printf("survival\n")
-		whereClause = "and category=6"
-		break
-	case "creative":
-		log.Printf("creative\n")
-		whereClause = "and category=7"
-		break
+	querySplit := strings.Split(query, ":")
+
+	if len(querySplit) == 2 && querySplit[0] == "c" {
+		log.Printf("category %v\n", querySplit[1])
+		whereClause = "and category=" + querySplit[1]
+	} else {
+		log.Printf("not category %v", querySplit[0])
+		switch query {
+		case "featured":
+			log.Printf("featuered\n")
+			whereClause = "and homepage_featured=1"
+			break
+		case "mostdownloaded":
+			log.Printf("mostdownloaded\n")
+			orderClause = "p.downloads DESC"
+			break
+		case "mostlikes":
+			log.Printf("mostlikes\n")
+			orderClause = "p.likes DESC"
+			break
+		}
 	}
 
 	sqlQuery := `SELECT
@@ -42,8 +51,8 @@ LEFT JOIN post_images fi ON (fi.id = featured_image_id AND fi.status = 1)
 LEFT JOIN post_images images ON (images.post_id = p.id AND images.status = 1)
 LEFT JOIN post_meta pdl ON (pdl.post_id = p.id AND pdl.meta_key = "download_link")
 WHERE p.type = 'map' AND p.platform = 'pe' AND p.status = 'published' AND pdl.meta_value LIKE 'http://minecrafthub.com/uploads/maps%' ` +
-		whereClause +
-		` GROUP BY p.id ORDER BY submitted DESC
+		whereClause + ` 
+GROUP BY p.id ORDER BY ` + orderClause + `
 limit ? offset ?`
 
 	maps, err := mySQLQueryMapsProduction(sqlQuery, siteRoot, count, start)
