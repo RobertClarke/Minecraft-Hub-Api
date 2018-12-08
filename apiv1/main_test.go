@@ -54,7 +54,7 @@ func TestHello(t *testing.T) {
 func TestGetMapsFilter(t *testing.T) {
 	payload := MapListRequest{}
 	payload.QueryName = "c:7"
-	payload.Skip = 0
+	payload.Skip = 5
 	payload.Take = 20
 	byt, err := json.Marshal(payload)
 	if err != nil {
